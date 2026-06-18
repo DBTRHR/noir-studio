@@ -1,0 +1,10 @@
+# NEXUS-generated artifacts (code graph + wiki + audit shots)
+.nexus/
+
+# Archived dev/QA screenshots
+ARCHIVE/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log

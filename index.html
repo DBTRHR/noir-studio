@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>NOIR Studio — Piano & Guitar Key Lab</title>
+  <link rel="preconnect" href="https://tonejs.github.io" />
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <!-- ambient backdrop -->
+  <div class="bg-glow"></div>
+  <div class="bg-grid"></div>
+
+  <header class="topbar glass">
+    <div class="brand">
+      <span class="bat">◣◢</span>
+      <h1>NOIR<span>Studio</span></h1>
+    </div>
+    <div class="key-readout">
+      <div class="kr-main">
+        <span class="kr-label">KEY</span>
+        <span id="current-key">C Major (Ionian)</span>
+      </div>
+      <div id="current-notes" class="kr-notes">C  D  E  F  G  A  B</div>
+    </div>
+    <div class="transpose">
+      <button id="transpose-down" title="Down a semitone">♭ −</button>
+      <button id="transpose-up" title="Up a semitone">♯ +</button>
+    </div>
+    <button id="theme-toggle" class="theme-toggle" title="Switch theme">🦇 Noir</button>
+  </header>
+
+  <main class="layout">
+    <!-- ============ LEFT: KEY LAB ============ -->
+    <aside class="keylab glass">
+      <section class="kl-block">
+        <h2>Pick a Key</h2>
+        <div id="root-chips" class="root-chips"></div>
+        <label class="field">
+          <span>Scale / Mode</span>
+          <select id="scale-select"></select>
+        </label>
+        <div id="relative-tool" class="relative-tool"></div>
+      </section>
+
+      <section class="kl-block">
+        <h2>Pick a Feeling</h2>
+        <div id="feeling-grid" class="feeling-grid"></div>
+      </section>
+
+      <section class="kl-block song-box">
+        <h2>Find a Song</h2>
+        <input id="song-search" type="text" placeholder="Search title or artist…" autocomplete="off" />
+        <div id="song-results" class="song-results"></div>
+      </section>
+
+      <section class="kl-block">
+        <h2>Sound</h2>
+        <label class="field">
+          <span>Guitar tone</span>
+          <select id="guitar-sound">
+            <option value="acoustic">Acoustic Guitar</option>
+            <option value="electric">Electric Guitar</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="toggle-labels" checked /> <span>Piano note labels</span></label>
+        <label class="check"><input type="checkbox" id="toggle-allfret" /> <span>Show all fret notes</span></label>
+      </section>
+    </aside>
+
+    <!-- ============ RIGHT: WORKSPACE ============ -->
+    <section class="workspace">
+      <nav class="tabs">
+        <button class="tab active" data-tab="spark">✦ Spark</button>
+        <button class="tab" data-tab="piano">🦇 Piano</button>
+        <button class="tab" data-tab="guitar">🕷️ Guitar</button>
+        <button class="tab" data-tab="riff">🔮 Riff Writer</button>
+        <button class="tab" data-tab="chords">💀 Chords</button>
+        <button class="tab" data-tab="scales">🎃 Scales</button>
+      </nav>
+
+      <!-- SPARK — one-tap song idea generator -->
+      <div class="panel active" data-panel="spark">
+        <div class="panel-head">
+          <h2>✦ Spark</h2>
+          <p class="muted">One tap = a key, a few chords, and a riff — set across the whole app so you can play along by ear. Stuck or bored? Start here.</p>
+        </div>
+        <div class="spark-go-wrap">
+          <button id="spark-go" class="spark-go">
+            <span class="spark-go-mark">✦</span>
+            <span class="spark-go-label">✦ Spark me</span>
+          </button>
+        </div>
+        <div id="spark-card" class="spark-card"></div>
+        <div class="spark-kept">
+          <h3>★ Kept ideas</h3>
+          <div id="spark-kept-list" class="spark-kept-list"></div>
+        </div>
+      </div>
+
+      <!-- PIANO -->
+      <div class="panel" data-panel="piano">
+        <div class="panel-head">
+          <h2>Piano</h2>
+          <p class="muted">Lit keys are in your key. The <span class="legend-root">red</span> keys are the root. Click to play.</p>
+        </div>
+        <div id="piano-board" class="piano-board"></div>
+      </div>
+
+      <!-- GUITAR -->
+      <div class="panel" data-panel="guitar">
+        <div class="panel-head">
+          <h2>Guitar Fretboard</h2>
+          <p class="muted">Dots show the notes in your key on every string. Change tuning below.</p>
+        </div>
+        <div class="tuning-bar glass">
+          <label class="field inline">
+            <span>Tuning</span>
+            <select id="tuning-select"></select>
+          </label>
+          <label class="field inline delay-field"><span>🌫️ Delay</span>
+            <select id="delay-select-guitar" class="delay-select">
+              <option value="off">Off</option>
+              <option value="slapback">Slapback</option>
+              <option value="echo">Eighth Echo</option>
+              <option value="dotted">Dotted (The Edge)</option>
+              <option value="ambient">Ambient Wash</option>
+            </select>
+          </label>
+          <div id="tuning-strings" class="tuning-strings"></div>
+        </div>
+        <div id="fretboard" class="fretboard"></div>
+      </div>
+
+      <!-- RIFF WRITER -->
+      <div class="panel" data-panel="riff">
+        <div class="panel-head">
+          <h2>Random Riff Writer</h2>
+          <p class="muted">Generate a riff in your key, then fine-tune it — click any note to change its pitch or length (16th → whole). Save the keepers and send them to the Looper.</p>
+        </div>
+        <div class="riff-toolbar">
+          <div class="seg" id="riff-inst" role="group" aria-label="Riff instrument">
+            <button class="seg-btn active" data-riff-inst="piano">🦇 Piano</button>
+            <button class="seg-btn" data-riff-inst="acoustic">🕷️ Acoustic</button>
+            <button class="seg-btn" data-riff-inst="electric">⚡ Electric</button>
+          </div>
+          <div class="seg" id="riff-feel" role="group" aria-label="Riff feel">
+            <button class="seg-btn active" data-riff-feel="smooth">Smooth</button>
+            <button class="seg-btn" data-riff-feel="staccato">Staccato</button>
+            <button class="seg-btn" data-riff-feel="swing">Swing</button>
+          </div>
+          <div class="seg" id="riff-style" role="group" aria-label="Generation brain" title="How the riff is written">
+            <button class="seg-btn" data-riff-style="random">🎲 Random</button>
+            <button class="seg-btn active" data-riff-style="cookie">🍪 Cookie-cutter</button>
+            <button class="seg-btn" data-riff-style="abstract">🌀 Abstract</button>
+          </div>
+          <label class="field inline delay-field"><span>🌫️ Delay</span>
+            <select id="delay-select" class="delay-select">
+              <option value="off">Off</option>
+              <option value="slapback">Slapback</option>
+              <option value="echo">Eighth Echo</option>
+              <option value="dotted">Dotted (The Edge)</option>
+              <option value="ambient">Ambient Wash</option>
+            </select>
+          </label>
+        </div>
+        <div class="riff-actions glass">
+          <button id="riff-generate" class="btn-accent">🔮 Generate</button>
+          <button id="riff-suggest" class="btn">🃏 Suggest&nbsp;3</button>
+          <button id="riff-play" class="btn">▶ Play</button>
+          <button id="riff-loop" class="btn">🌀 Loop</button>
+          <button id="riff-save" class="btn">⚰️ Save</button>
+          <button id="riff-tolooper" class="btn">🕸️ To Looper</button>
+          <label class="slider"><span>Tempo <b id="riff-bpm-val">100</b></span>
+            <input type="range" id="riff-bpm" min="50" max="200" value="100" /></label>
+          <label class="slider"><span>Notes <b id="riff-len-val">12</b></span>
+            <input type="range" id="riff-len" min="4" max="24" value="12" /></label>
+        </div>
+        <div id="riff-suggestions" class="riff-suggestions"></div>
+        <p class="riff-hint muted">👆 Click a note below to edit it.</p>
+        <div id="riff-seq" class="riff-seq"></div>
+        <div id="riff-editor" class="riff-editor"></div>
+        <div class="riff-saved">
+          <h3>🦴 Saved Riffs</h3>
+          <div id="riff-saved-list" class="riff-saved-list"></div>
+        </div>
+      </div>
+
+      <!-- CHORDS -->
+      <div class="panel" data-panel="chords">
+        <div class="panel-head">
+          <h2>Chord Book</h2>
+          <p class="muted">Diagrams for every root. Tap any chord to hear it. Chords in your current key are up top.</p>
+        </div>
+        <div class="key-chords-wrap">
+          <h3>Chords in <span id="kc-key-name"></span> your key</h3>
+          <div id="key-chords" class="key-chords"></div>
+        </div>
+        <div class="chord-quality-bar">
+          <button class="qbtn active" data-chord-quality="maj">Major</button>
+          <button class="qbtn" data-chord-quality="min">Minor</button>
+          <button class="qbtn" data-chord-quality="7">7th</button>
+        </div>
+        <div id="chord-book" class="chord-book"></div>
+      </div>
+
+      <!-- SCALES -->
+      <div class="panel" data-panel="scales">
+        <div class="panel-head">
+          <h2>Learn Scales</h2>
+          <p class="muted">Pick a scale to see its formula and hear it played in your key.</p>
+        </div>
+        <div class="scales-wrap">
+          <div id="scale-list" class="scale-list"></div>
+          <div id="scale-detail" class="scale-detail glass"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- persistent Looper dock (Piano / Guitar / Riff pages) -->
+  <div id="looper-dock" class="looper-dock">
+    <div id="looper-tracks" class="dock-tracks"></div>
+    <div class="dock-bar glass">
+      <button id="dock-toggle" class="dock-toggle">🕸️ Looper <span id="dock-count" class="dock-count">0</span></button>
+      <button id="loop-rec" class="btn-rec">● Record</button>
+      <button id="loop-play" class="btn">▶ Play</button>
+      <button id="loop-clear" class="btn">💀 Clear</button>
+      <label class="field inline"><span>Bars</span>
+        <select id="loop-bars"><option>1</option><option selected>2</option><option>4</option><option>8</option></select>
+      </label>
+      <label class="slider"><span>Tempo <b id="loop-bpm-val">100</b></span>
+        <input type="range" id="loop-bpm" min="50" max="200" value="100" /></label>
+      <label class="check"><input type="checkbox" id="loop-quantize" checked /> <span>Quantize</span></label>
+      <label class="check"><input type="checkbox" id="loop-metro" /> <span>Metronome</span></label>
+    </div>
+  </div>
+
+  <!-- Nathan Explosion — in-app metal mentor -->
+  <div id="nathan" class="nathan">
+    <div id="nathan-chat" class="nathan-chat">
+      <div class="nathan-chat-head">
+        <span class="nch-avatar" aria-hidden="true">
+          <svg viewBox="0 0 80 80" class="nathan-svg">
+            <g class="banger" id="nch-head-banger">
+              <path class="hair" d="M40 6 C16 6 12 34 15 56 C17 72 25 76 25 76 L21 42 C21 22 29 16 40 16 C51 16 59 22 59 42 L55 76 C55 76 63 72 65 56 C68 34 64 6 40 6 Z"/>
+              <circle class="face" cx="40" cy="34" r="12.5"/>
+              <rect class="shades" x="29" y="31" width="22" height="6" rx="2.5"/>
+              <path class="goatee" d="M33 44 Q40 53 47 44 L45 47 Q40 51 35 47 Z"/>
+            </g>
+          </svg>
+        </span>
+        <span class="nch-titlewrap">
+          <span class="nch-title">NATHAN EXPLOSION</span>
+          <span id="nathan-keytag" class="nch-keytag"></span>
+        </span>
+        <button id="nathan-settings" class="nch-btn" title="Connect OpenAI for live answers">⚙</button>
+        <button id="nathan-close" class="nch-btn" title="Close">✕</button>
+      </div>
+      <div id="nathan-log" class="nathan-log"></div>
+      <div id="nathan-typing" class="nathan-typing" aria-hidden="true">
+        <span class="nt-who">🤘 NATHAN</span>
+        <span class="nt-dots"><i></i><i></i><i></i></span>
+      </div>
+      <div id="nathan-chips" class="nathan-chips"></div>
+      <div class="nathan-input">
+        <input id="nathan-q" type="text" autocomplete="off"
+          placeholder="Ask about theory, songwriting, or fixing your guitar…" />
+        <button id="nathan-send" class="btn-accent">Ask</button>
+      </div>
+    </div>
+    <div id="nathan-bubble" class="nathan-bubble"></div>
+    <button id="nathan-avatar" class="nathan-avatar" title="Talk to Nathan">
+      <svg viewBox="0 0 80 80" class="nathan-svg" aria-hidden="true">
+        <g class="banger">
+          <path class="hair" d="M40 6 C16 6 12 34 15 56 C17 72 25 76 25 76 L21 42 C21 22 29 16 40 16 C51 16 59 22 59 42 L55 76 C55 76 63 72 65 56 C68 34 64 6 40 6 Z"/>
+          <circle class="face" cx="40" cy="34" r="12.5"/>
+          <rect class="shades" x="29" y="31" width="22" height="6" rx="2.5"/>
+          <path class="goatee" d="M33 44 Q40 53 47 44 L45 47 Q40 51 35 47 Z"/>
+        </g>
+      </svg>
+    </button>
+  </div>
+
+  <!-- loader + toast -->
+  <div id="loader" class="loader">
+    <div class="loader-card glass">
+      <div class="spinner"></div>
+      <div id="loader-label">Loading…</div>
+      <div class="loader-track"><div id="loader-bar" class="loader-bar"></div></div>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <!-- Tone.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <!-- App modules (order matters) -->
+  <script src="js/theory.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/piano.js"></script>
+  <script src="js/guitar.js"></script>
+  <script src="js/chords.js"></script>
+  <script src="js/scales.js"></script>
+  <script src="js/riff.js"></script>
+  <script src="js/looper.js"></script>
+  <script src="js/kb.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/spark.js"></script>
+  <script src="js/nathan.js"></script>
+</body>
+</html>
