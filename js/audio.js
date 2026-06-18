@@ -7,13 +7,14 @@
 (function (root) {
   "use strict";
 
-  // Guitar samples are self-hosted (downloaded into ./samples/) so they load
-  // reliably and work offline. Piano stays on the Salamander CDN (works well).
+  // All samples are self-hosted (downloaded into ./samples/) so they load
+  // reliably and work offline. Relative paths keep this working on GitHub
+  // Pages subpaths (e.g. dbtrhr.github.io/noir-studio/).
   const GH = "samples/";
 
   const SAMPLE_MAPS = {
     piano: {
-      baseUrl: "https://tonejs.github.io/audio/salamander/",
+      baseUrl: GH + "piano/",
       urls: {
         A0: "A0.mp3", C1: "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
         A1: "A1.mp3", C2: "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
@@ -112,11 +113,40 @@
     },
 
     _fallbackSynth(name) {
+      // Warmer, fuller fallback voice. Piano gets a soft detuned fat-triangle
+      // (bell-like body, quick attack, natural decay); guitars get a detuned
+      // fat-sawtooth (richer harmonics for plucked/strummed character).
+      // Routed through the same delay -> reverb -> EQ -> comp chain as the
+      // real samplers so it still sits in the mix nicely. A gentle lowpass
+      // filter tames the edge so it reads as "warm" rather than buzzy.
+      const isPiano = name === "piano";
+
       const synth = new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: name === "piano" ? "triangle" : "fmsine" },
-        envelope: { attack: 0.005, decay: 0.3, sustain: 0.25, release: 1.2 },
-      }).connect(this._reverb || Tone.getDestination());
+        maxPolyphony: 16,
+        volume: -6,
+        oscillator: {
+          type: isPiano ? "fattriangle" : "fatsawtooth",
+          count: 3,
+          spread: isPiano ? 14 : 22,
+        },
+        envelope: isPiano
+          ? { attack: 0.006, decay: 0.9, sustain: 0.18, release: 1.6, attackCurve: "exponential", releaseCurve: "exponential" }
+          : { attack: 0.004, decay: 0.6, sustain: 0.22, release: 1.3, attackCurve: "exponential", releaseCurve: "exponential" },
+      });
+
+      // Soften the top end so the synth reads as warm, not harsh.
+      const tone = new Tone.Filter({
+        type: "lowpass",
+        frequency: isPiano ? 4200 : 3400,
+        rolloff: -12,
+        Q: 0.4,
+      });
+
+      synth.connect(tone);
+      tone.connect(this._delay || this._reverb || Tone.getDestination());
+
       synth._isFallback = true;
+      synth._toneFilter = tone; // keep a ref so it isn't GC'd
       return synth;
     },
 

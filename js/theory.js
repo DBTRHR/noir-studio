@@ -139,7 +139,19 @@
     const idx = noteIndex(rootName) + 3;
     return nameFromIndex(idx, preferFlat(nameFromIndex(idx, false), "major"));
   }
-  function parallelMinor(rootName) { return rootName; } // same root, minor scale
+  // Parallel minor of a major root: SAME tonic, minor scale.
+  // Returns the root respelled for the minor context (e.g. C Major -> C minor,
+  // G Major -> G minor). Pitch is unchanged; only the preferred accidental
+  // spelling may differ from the major-key spelling.
+  function parallelMinor(rootName) {
+    const flat = preferFlat(rootName, "minor");
+    return nameFromIndex(noteIndex(rootName), flat);
+  }
+  // Parallel major of a minor root: SAME tonic, major scale (mirror direction).
+  function parallelMajor(rootName) {
+    const flat = preferFlat(rootName, "major");
+    return nameFromIndex(noteIndex(rootName), flat);
+  }
   function dominant(rootName)    { return nameFromIndex(noteIndex(rootName) + 7, false); }
   function subdominant(rootName) { return nameFromIndex(noteIndex(rootName) + 5, false); }
 
@@ -181,7 +193,7 @@
     SHARP, FLAT, SCALES, TRIAD_QUALITIES, ROMAN, ALL_ROOTS,
     noteIndex, mod, nameFromIndex, preferFlat,
     getScaleNotes, getScalePitchClasses,
-    relativeMinor, relativeMajor, parallelMinor, dominant, subdominant,
+    relativeMinor, relativeMajor, parallelMinor, parallelMajor, dominant, subdominant,
     triadAtDegree, diatonicChords, withOctave,
   };
 
