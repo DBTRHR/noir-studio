@@ -38,8 +38,12 @@ If the CDN is ever unreachable, the app automatically falls back to a built-in s
 
 It's a static site — no build step.
 
+**Easiest (Windows):** double-click the **NOIR Studio** desktop shortcut (the Metal Dude icon) — it starts the local server and opens the app for you.
+
+**Manual:**
+
 ```bash
-cd C:\Users\DBT65\APP0110\noir-studio
+cd C:\Users\DBT65\DBTRHR-repos\noir-studio
 python -m http.server 8777
 ```
 
@@ -63,9 +67,17 @@ noir-studio/
     ├── chords.js      # picture chord book (generated SVG diagrams)
     ├── scales.js      # learn-scales view
     ├── riff.js        # Random Riff Writer
-    ├── looper.js      # multi-track loop recorder (Tone.Transport)
+    ├── drums.js       # drum engine: electronic (synth) + acoustic (sampled) kits
+    ├── looper.js      # the Studio: 12-track recorder + step sequencer + arrangement
+    │                  #   canvas + undo/redo + copy/paste (Tone.Transport)
+    ├── spark.js       # Spark idea generator (play-both, drag-reorder chords)
+    ├── kb.js          # Metal Dude knowledge base loader
+    ├── nathan.js      # Metal Dude mentor (offline KB + optional OpenAI)
     └── app.js         # controller: state, Key Lab, tabs, wiring
 ```
+
+Desktop launch: `launch-noir.vbs` (starts the server + opens the browser) and
+`make-metal-dude-icon.py` (regenerates `metal-dude.ico` for the shortcut).
 
 ## Ideas / next steps
 
