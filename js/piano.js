@@ -132,6 +132,8 @@
     },
 
     bindKeyboard() {
+      if (this._kbBound) return;   // guard against double-binding on re-mount
+      this._kbBound = true;
       document.addEventListener("keydown", (e) => {
         if (!this.kbEnabled) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;     // don't hijack browser shortcuts

@@ -401,7 +401,8 @@
       this._wireChords();
 
       // re-roll button label nudges from "Spark me" to "Spark again"
-      this.btnSpark.querySelector(".spark-go-label").textContent = "✦ Spark again";
+      const goLabel = this.btnSpark && this.btnSpark.querySelector(".spark-go-label");
+      if (goLabel) goLabel.textContent = "✦ Spark again";
     },
 
     /* ---------- keep shelf (localStorage) ---------- */

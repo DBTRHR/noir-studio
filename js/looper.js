@@ -298,6 +298,16 @@
 
       if (!this._metroSynth) this._metroSynth = new Tone.MembraneSynth({ volume: -10 }).toDestination();
 
+      // The count-in + record-engage are scheduled at absolute transport seconds
+      // that can land PAST the current loopEnd. On a looping transport those
+      // scheduleOnce times never fire (the transport wraps first), so recording
+      // would silently never engage. Disable transport looping for the take — the
+      // tracks' own Parts/Sequences self-loop, and recordNote wraps note times via
+      // `% loopLength()`, so playback/recording still loop correctly. Restored in
+      // _stopRecord.
+      this._loopWas = Tone.Transport.loop;
+      Tone.Transport.loop = false;
+
       // ── Count-in timing math (explicit, in absolute transport seconds) ──
       // The quantize grid and the metronome are both anchored to transport 0
       // (loopStart). To make the take line up, the count-in clicks one full bar
@@ -342,6 +352,14 @@
     _stopRecord() {
       this.recording = false;
       this.countingIn = false;
+      // Restore transport looping (disabled during the take). Wrap the position
+      // back into the loop window so re-enabling loop is clean.
+      if (this._loopWas != null && root.Tone) {
+        const L = this.loopLength();
+        try { Tone.Transport.seconds = Tone.Transport.seconds % L; } catch (e) {}
+        Tone.Transport.loop = this._loopWas;
+        this._loopWas = null;
+      }
       if (this._recStartId != null) { try { Tone.Transport.clear(this._recStartId); } catch (e) {} this._recStartId = null; }
       if (this._countIds) { this._countIds.forEach((id) => { try { Tone.Transport.clear(id); } catch (e) {} }); this._countIds = null; }
       this.recBtn && this.recBtn.classList.remove("armed");
@@ -406,6 +424,7 @@
     // Used by Spark / Riff / Nathan (events: [{time, note, dur, instrument}]).
     addTrack(name, events, srcLoopLen) {
       if (!root.Tone) return;
+      this._snapshot();   // snapshot BEFORE mutating bars/loop length so undo restores pre-add state
       // Grow the loop to fit the incoming material if needed.
       if (srcLoopLen && srcLoopLen > this.loopLength()) {
         const neededBars = Math.ceil(srcLoopLen / this.secPerBar());
@@ -427,7 +446,6 @@
         instrument: e.instrument || inst,
         vel: e.vel != null ? e.vel : 0.82,
       }));
-      this._snapshot();
       const track = {
         id,
         name: name || `Take ${this.tracks.length + 1}`,
@@ -601,8 +619,9 @@
       const i = this.tracks.findIndex((x) => x.id === id);
       if (i < 0) return;
       this._snapshot();
-      try { this.tracks[i].part.dispose(); } catch (e) {}
-      try { this.tracks[i].seq.dispose(); } catch (e) {}
+      const _t = this.tracks[i];
+      if (_t.part) { try { _t.part.dispose(); } catch (e) {} _t.part = null; }
+      if (_t.seq)  { try { _t.seq.dispose();  } catch (e) {} _t.seq = null; }
       if (this.seqTrackId === id) this.closeStepSequencer();
       // drop any arrangement clips bound to this track
       this.clips = this.clips.filter((c) => c.trackId !== id);
@@ -619,8 +638,8 @@
       if (this.tracks.length || this.clips.length) this._snapshot();
       if (this._songPlaying) this._stopSong();
       this.tracks.forEach((t) => {
-        try { t.part.dispose(); } catch (e) {}
-        try { t.seq.dispose(); } catch (e) {}
+        if (t.part) { try { t.part.dispose(); } catch (e) {} t.part = null; }
+        if (t.seq)  { try { t.seq.dispose();  } catch (e) {} t.seq = null; }
       });
       this.closeStepSequencer();
       this.tracks = [];
@@ -744,6 +763,8 @@
     },
 
     bindHotkeys() {
+      if (this._hotkeysBound) return;   // guard against double-binding on re-mount
+      this._hotkeysBound = true;
       document.addEventListener("keydown", (e) => {
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         if (this._typing(document.activeElement)) return;
@@ -1376,6 +1397,12 @@
     /* ============================================================= */
     /*  Arrangement canvas render                                    */
     /* ============================================================= */
+    // Escape user-supplied text (track/clip names) for safe innerHTML interpolation.
+    _esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, (ch) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+    },
+
     renderArrangement() {
       const host = this.arrangeEl;
       if (!host) return;
@@ -1412,8 +1439,8 @@
           clipEls +=
             `<div class="arr-clip${sel}" data-clip="${c.id}"
                   style="left:${left}%; width:${w}%; --cc:${c.color}"
-                  title="${c.name} · ${mm(c.start)}–${mm(c.start + c.len)}">
-               <span class="arr-clip-name">${c.name}</span>
+                  title="${this._esc(c.name)} · ${mm(c.start)}–${mm(c.start + c.len)}">
+               <span class="arr-clip-name">${this._esc(c.name)}</span>
                <button class="arr-clip-del" data-clip-del="${c.id}" title="Delete clip">✕</button>
              </div>`;
         });
@@ -1421,7 +1448,7 @@
           `<div class="arr-lane" data-lane="${t.id}">
              <div class="arr-lane-head">
                <span class="arr-lane-dot" style="background:${t.color}"></span>
-               <span class="arr-lane-name" title="${t.name}">${t.name}</span>
+               <span class="arr-lane-name" title="${this._esc(t.name)}">${this._esc(t.name)}</span>
                <button class="arr-add" data-arr-add="${t.id}" title="Add this loop/pattern to the song at the playhead">＋ Add</button>
              </div>
              <div class="arr-lane-body">${clipEls}</div>
@@ -1484,18 +1511,32 @@
         if (!dragging) return;
         const lanesEl = host.querySelector(".arr-lanes");
         if (!lanesEl) return;
+        const c = this.clips.find((x) => x.id === clipId);
+        if (!c) return;
         const dx = e.clientX - startX;
         if (Math.abs(dx) > 3) moved = true;
         const secPerPx = this.songLen / lanesEl.clientWidth;
         let ns = origStart + dx * secPerPx;
         if (ns < 0) ns = 0;
+        if (ns + c.len > this.SONG_MAX) ns = this.SONG_MAX - c.len;
         if (!snapped) { this._snapshot(); snapped = true; } // one snapshot per drag
-        this.moveClip(clipId, ns, false);
+        // Update the in-memory start and move ONLY this element — re-rendering the
+        // whole arrangement mid-drag would replace the very element being dragged
+        // (making the drag stick/jump) and is needlessly slow.
+        c.start = ns;
+        el.style.left = (ns / this.songLen) * 100 + "%";
       };
       const onUp = () => {
+        if (!dragging) return;
         dragging = false;
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
+        if (moved) {   // commit once: grow/retract the canvas + a single full render
+          this._growSongToFit();
+          this._autoSizeSong();
+          this.renderArrangement();
+          this._updateEditUI();
+        }
       };
       el.addEventListener("mousedown", onDown);
     },
@@ -1584,7 +1625,7 @@
 
       const head =
         `<div class="seq-head">
-           <span class="seq-title">▦ Steps — <b>${t.name}</b> <span class="seq-kit">${kit} kit</span></span>
+           <span class="seq-title">▦ Steps — <b>${this._esc(t.name)}</b> <span class="seq-kit">${kit} kit</span></span>
            <span class="seq-actions">
              <button class="btn seq-preset">Basic beat</button>
              <button class="btn seq-clear">Clear grid</button>
@@ -1688,7 +1729,7 @@
 
       row.innerHTML = `
         <span class="strk-dot" style="background:${t.color}; color:${t.color}"></span>
-        <input class="strk-name" type="text" value="${t.name}" spellcheck="false" />
+        <input class="strk-name" type="text" value="${this._esc(t.name)}" spellcheck="false" />
         <select class="strk-inst">${opts}</select>
         ${stepsBtn}
         <button class="strk-arm ${t.armed ? "on" : ""}" title="Record-arm">●</button>
