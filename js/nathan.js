@@ -199,7 +199,7 @@
       const hasKey = !!localStorage.getItem(KEY_STORE);
       const c = this._ctx();
       this.addMsg("nathan",
-        "Nathan Explosion. I write brutal music and I know how it works. " +
+        "Metal Dude. I write brutal music and I know how it works. " +
         (c ? `You're in ${c.keyLabel} right now. ` : "") +
         "Ask me about scales, chords, songwriting, what sounds good and why, or how to fix your gear — " +
         "or hit a button below and I'll build you something. " +
@@ -210,7 +210,7 @@
     addMsg(who, text) {
       const row = document.createElement("div");
       row.className = "n-msg " + who;
-      row.innerHTML = `<span class="n-who">${who === "nathan" ? "🤘 NATHAN" : "YOU"}</span><span class="n-text"></span>`;
+      row.innerHTML = `<span class="n-who">${who === "nathan" ? "🤘 METAL DUDE" : "YOU"}</span><span class="n-text"></span>`;
       row.querySelector(".n-text").textContent = text;
       this.log.appendChild(row);
       this.log.scrollTop = this.log.scrollHeight;
@@ -378,7 +378,7 @@
             events.push({ time: i * beat + j * 0.02, note: vn, dur: beat * 0.92, instrument: inst });
           });
         });
-        Looper.addTrack(`Nathan · ${c.shortKey} ${seq.map((x) => x.roman).join("-")}`, events, seq.length * beat);
+        Looper.addTrack(`Metal Dude · ${c.shortKey} ${seq.map((x) => x.roman).join("-")}`, events, seq.length * beat);
         App.toast("Progression sent to Looper ✓");
         this.addMsg("nathan", this._voice("Dropped that progression in the Looper. Build a song on it."));
       });
@@ -512,7 +512,7 @@
       const ctx = this._bestEntries(q, 4).map((e) => `• ${e.title}: ${e.content}`).join("\n");
       const live = this._ctx();
       const liveLine = live ? `The user is currently working in ${live.keyLabel} on the ${live.tab || "?"} tab; reference it when relevant.\n` : "";
-      const sys = "You are Nathan Explosion, the deep-voiced, deadpan, brutal frontman of Dethklok — but here you are a " +
+      const sys = "You are Metal Dude, a deep-voiced, deadpan, brutal metal frontman — but here you are a " +
         "genuinely knowledgeable music mentor and guitar tech. Speak slowly and gruffly with dark deadpan humor; use words " +
         "like 'brutal', 'metal', 'you know'. ALWAYS give accurate, genuinely useful music-theory / songwriting / " +
         "instrument-setup advice — correctness first, character second. Keep replies to 2-5 sentences. Stay on music, " +
@@ -537,7 +537,7 @@
     connectKey() {
       const cur = localStorage.getItem(KEY_STORE) || "";
       const k = window.prompt(
-        "Paste your OpenAI API key to let Nathan answer freely (stored only in this browser).\n" +
+        "Paste your OpenAI API key to let Metal Dude answer freely (stored only in this browser).\n" +
         "Leave blank and OK to remove it. He works offline without one.\n\n" +
         "Heads up: a browser-stored key is visible in this browser — use a key with limited scope.", cur);
       if (k === null) return;

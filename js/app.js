@@ -274,10 +274,19 @@
         if (id === "guitar") this.state.instrument = "guitar";
         this._updateDock(id);
       }));
+
+      // "🎛️ Studio" shortcut link on the floating transport strip.
+      document.querySelectorAll("[data-goto-studio]").forEach((el) =>
+        el.addEventListener("click", () => {
+          const tab = document.querySelector('[data-tab="studio"]');
+          if (tab) tab.click();
+        }));
     },
     _updateDock(id) {
-      const d = document.getElementById("looper-dock");
-      if (d) d.classList.toggle("visible", ["piano", "guitar", "riff"].includes(id));
+      // Slim floating transport: only on the playable boards (Piano/Guitar/Riff).
+      // The full multitrack mixer lives on the Studio page itself.
+      const x = document.getElementById("xport");
+      if (x) x.classList.toggle("visible", ["piano", "guitar", "riff"].includes(id));
     },
 
     renderKeyReadout() {

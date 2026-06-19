@@ -82,6 +82,7 @@
         <button class="tab" data-tab="riff">🔮 Riff Writer</button>
         <button class="tab" data-tab="chords">💀 Chords</button>
         <button class="tab" data-tab="scales">🎃 Scales</button>
+        <button class="tab" data-tab="studio">🎛️ Studio</button>
       </nav>
 
       <!-- SPARK — one-tap song idea generator -->
@@ -220,43 +221,106 @@
           <div id="scale-detail" class="scale-detail glass"></div>
         </div>
       </div>
+
+      <!-- STUDIO — multitrack recorder (FL-Studio-style) -->
+      <div class="panel" data-panel="studio">
+        <div class="panel-head">
+          <h2>🎛️ Studio</h2>
+          <p class="muted">Multitrack recorder. Add up to 12 tracks, pick an instrument and
+            <b>arm ●</b> each one, then hit <b>● Record</b> — a 1-bar count-in clicks, then play
+            the Piano / Guitar boards to lay down a loop. Overdub, solo, mute and mix.
+            <span class="muted">Hotkeys: <b>Space/W</b> Play · <b>Q</b> Record · <b>E</b> Clear.</span></p>
+        </div>
+
+        <!-- transport -->
+        <div class="studio-transport glass">
+          <button id="studio-rec" class="btn-rec">● Record</button>
+          <button id="studio-play" class="btn">▶ Play</button>
+          <button id="studio-clear" class="btn">💀 Clear</button>
+          <span class="studio-pos">Pos <b id="studio-pos">1.1</b></span>
+          <label class="field inline"><span>Bars</span>
+            <select id="studio-bars"><option>1</option><option selected>2</option><option>4</option><option>8</option></select>
+          </label>
+          <label class="slider"><span>Tempo <b id="studio-bpm-val">100</b></span>
+            <input type="range" id="studio-bpm" min="50" max="200" value="100" /></label>
+          <label class="check"><input type="checkbox" id="studio-quantize" checked /> <span>Quantize</span></label>
+          <label class="check"><input type="checkbox" id="studio-metro" /> <span>Metronome</span></label>
+
+          <!-- edit toolbar: undo/redo + copy/paste + mode toggle -->
+          <span class="studio-tools">
+            <button id="studio-undo" class="btn" title="Undo (Backspace)" disabled>↶ Undo</button>
+            <button id="studio-redo" class="btn" title="Redo (Home)" disabled>↷ Redo</button>
+            <button id="studio-copy" class="btn" title="Copy selection (Insert)" disabled>⧉ Copy</button>
+            <button id="studio-paste" class="btn" title="Paste (Pause)" disabled>⧉ Paste</button>
+          </span>
+          <span class="studio-mode" role="group" aria-label="Studio mode">
+            <button id="studio-mode-loop" class="seg-btn active" title="Loop mode — all tracks loop">Loop</button>
+            <button id="studio-mode-song" class="seg-btn" title="Song mode — linear arrangement">Song</button>
+          </span>
+        </div>
+
+        <!-- mixer / track list -->
+        <div class="studio-tracks-head">
+          <h3>Tracks</h3>
+          <button id="studio-add" class="btn-accent">+ Add track</button>
+        </div>
+        <div id="studio-tracks" class="studio-tracks"></div>
+
+        <!-- step sequencer mounts here (drum tracks) -->
+        <div id="studio-seq" class="studio-seq"></div>
+
+        <!-- HOOK: arrangement canvas mounts here in a later stage -->
+        <div id="studio-arrange" class="studio-arrange"></div>
+      </div>
     </section>
   </main>
 
-  <!-- persistent Looper dock (Piano / Guitar / Riff pages) -->
-  <div id="looper-dock" class="looper-dock">
-    <div id="looper-tracks" class="dock-tracks"></div>
-    <div class="dock-bar glass">
-      <button id="dock-toggle" class="dock-toggle">🕸️ Looper <span id="dock-count" class="dock-count">0</span></button>
-      <button id="loop-rec" class="btn-rec">● Record</button>
-      <button id="loop-play" class="btn">▶ Play</button>
-      <button id="loop-clear" class="btn">💀 Clear</button>
-      <label class="field inline"><span>Bars</span>
-        <select id="loop-bars"><option>1</option><option selected>2</option><option>4</option><option>8</option></select>
-      </label>
-      <label class="slider"><span>Tempo <b id="loop-bpm-val">100</b></span>
-        <input type="range" id="loop-bpm" min="50" max="200" value="100" /></label>
-      <label class="check"><input type="checkbox" id="loop-quantize" checked /> <span>Quantize</span></label>
-      <label class="check"><input type="checkbox" id="loop-metro" /> <span>Metronome</span></label>
-    </div>
+  <!-- slim floating transport strip (Piano / Guitar / Riff pages) so you can
+       record into armed Studio tracks while playing the boards. Full mixer
+       lives on the 🎛️ Studio page. -->
+  <div id="xport" class="xport glass">
+    <button id="xport-rec" class="xport-rec" title="Record (Q)">●</button>
+    <button id="xport-play" class="xport-play" title="Play / Pause (Space)">▶</button>
+    <span class="xport-pos">⏱ <b id="xport-pos">1.1</b></span>
+    <a class="xport-link" data-goto-studio title="Open the Studio mixer">🎛️ Studio</a>
   </div>
 
-  <!-- Nathan Explosion — in-app metal mentor -->
+  <!-- Metal Dude — in-app metal mentor -->
   <div id="nathan" class="nathan">
     <div id="nathan-chat" class="nathan-chat">
       <div class="nathan-chat-head">
         <span class="nch-avatar" aria-hidden="true">
           <svg viewBox="0 0 80 80" class="nathan-svg">
             <g class="banger" id="nch-head-banger">
-              <path class="hair" d="M40 6 C16 6 12 34 15 56 C17 72 25 76 25 76 L21 42 C21 22 29 16 40 16 C51 16 59 22 59 42 L55 76 C55 76 63 72 65 56 C68 34 64 6 40 6 Z"/>
-              <circle class="face" cx="40" cy="34" r="12.5"/>
-              <rect class="shades" x="29" y="31" width="22" height="6" rx="2.5"/>
-              <path class="goatee" d="M33 44 Q40 53 47 44 L45 47 Q40 51 35 47 Z"/>
+              <!-- long straight metal curtains behind the head -->
+              <path class="hair-back" d="M40 3 C20 3 11 18 11 38 C11 55 14 68 17 78 L27 78 C23 66 23 52 24 42 L24 30 C24 18 31 11 40 11 C49 11 56 18 56 30 L56 42 C57 52 57 66 53 78 L63 78 C66 68 69 55 69 38 C69 18 60 3 40 3 Z"/>
+              <!-- pale face -->
+              <path class="face" d="M28 30 C28 22 33 18 40 18 C47 18 52 22 52 30 L52 41 C52 50 47 56 40 56 C33 56 28 50 28 41 Z"/>
+              <!-- full dark metal beard over the jaw -->
+              <path class="goatee" d="M30 44 C31 54 35 61 40 62 C45 61 49 54 50 44 C50 52 48 58 44 61 C42 62 38 62 36 61 C32 58 30 52 30 44 Z"/>
+              <!-- heavy angry brows -->
+              <path class="brow" d="M30 32.5 L39 36.4 L39 38.1 L30 34.2 Z"/>
+              <path class="brow" d="M50 32.5 L41 36.4 L41 38.1 L50 34.2 Z"/>
+              <!-- narrowed eyes with a red glint -->
+              <path class="eye" d="M32 38.4 Q35 37.4 38 38.8 Q35 39.8 32 38.9 Z"/>
+              <path class="eye" d="M48 38.4 Q45 37.4 42 38.8 Q45 39.8 48 38.9 Z"/>
+              <circle class="eye-glint" cx="35" cy="38.5" r="0.95"/>
+              <circle class="eye-glint" cx="45" cy="38.5" r="0.95"/>
+              <!-- nose -->
+              <path class="nose" d="M40 39 L38.4 45 L41.4 45"/>
+              <!-- horseshoe mustache -->
+              <path class="mustache" d="M33.5 45.5 Q40 48.5 46.5 45.5 L45.5 50 L44 48.8 Q40 50 36 48.8 L34.5 50 Z"/>
+              <!-- subtle scowl -->
+              <path class="mouth" d="M37 49.6 Q40 51 43 49.6"/>
+              <!-- center-parted fringe + straight side curtains over the face -->
+              <path class="hair-front" d="M40 11 C33 11 27 16 26 27 L30 31 C31 22 34 18 40 17 C46 18 49 22 50 31 L54 27 C53 16 47 11 40 11 Z"/>
+              <path class="hair-front" d="M26 27 C24 37 25 51 28 61 L22 58 C20 46 21 34 26 27 Z"/>
+              <path class="hair-front" d="M54 27 C56 37 55 51 52 61 L58 58 C60 46 59 34 54 27 Z"/>
             </g>
           </svg>
         </span>
         <span class="nch-titlewrap">
-          <span class="nch-title">NATHAN EXPLOSION</span>
+          <span class="nch-title">METAL DUDE</span>
           <span id="nathan-keytag" class="nch-keytag"></span>
         </span>
         <button id="nathan-settings" class="nch-btn" title="Connect OpenAI for live answers">⚙</button>
@@ -264,7 +328,7 @@
       </div>
       <div id="nathan-log" class="nathan-log"></div>
       <div id="nathan-typing" class="nathan-typing" aria-hidden="true">
-        <span class="nt-who">🤘 NATHAN</span>
+        <span class="nt-who">🤘 METAL DUDE</span>
         <span class="nt-dots"><i></i><i></i><i></i></span>
       </div>
       <div id="nathan-chips" class="nathan-chips"></div>
@@ -275,13 +339,33 @@
       </div>
     </div>
     <div id="nathan-bubble" class="nathan-bubble"></div>
-    <button id="nathan-avatar" class="nathan-avatar" title="Talk to Nathan">
+    <button id="nathan-avatar" class="nathan-avatar" title="Talk to Metal Dude">
       <svg viewBox="0 0 80 80" class="nathan-svg" aria-hidden="true">
         <g class="banger">
-          <path class="hair" d="M40 6 C16 6 12 34 15 56 C17 72 25 76 25 76 L21 42 C21 22 29 16 40 16 C51 16 59 22 59 42 L55 76 C55 76 63 72 65 56 C68 34 64 6 40 6 Z"/>
-          <circle class="face" cx="40" cy="34" r="12.5"/>
-          <rect class="shades" x="29" y="31" width="22" height="6" rx="2.5"/>
-          <path class="goatee" d="M33 44 Q40 53 47 44 L45 47 Q40 51 35 47 Z"/>
+          <!-- long straight metal curtains behind the head -->
+          <path class="hair-back" d="M40 3 C20 3 11 18 11 38 C11 55 14 68 17 78 L27 78 C23 66 23 52 24 42 L24 30 C24 18 31 11 40 11 C49 11 56 18 56 30 L56 42 C57 52 57 66 53 78 L63 78 C66 68 69 55 69 38 C69 18 60 3 40 3 Z"/>
+          <!-- pale face -->
+          <path class="face" d="M28 30 C28 22 33 18 40 18 C47 18 52 22 52 30 L52 41 C52 50 47 56 40 56 C33 56 28 50 28 41 Z"/>
+          <!-- full dark metal beard over the jaw -->
+          <path class="goatee" d="M30 44 C31 54 35 61 40 62 C45 61 49 54 50 44 C50 52 48 58 44 61 C42 62 38 62 36 61 C32 58 30 52 30 44 Z"/>
+          <!-- heavy angry brows -->
+          <path class="brow" d="M30 32.5 L39 36.4 L39 38.1 L30 34.2 Z"/>
+          <path class="brow" d="M50 32.5 L41 36.4 L41 38.1 L50 34.2 Z"/>
+          <!-- narrowed eyes with a red glint -->
+          <path class="eye" d="M32 38.4 Q35 37.4 38 38.8 Q35 39.8 32 38.9 Z"/>
+          <path class="eye" d="M48 38.4 Q45 37.4 42 38.8 Q45 39.8 48 38.9 Z"/>
+          <circle class="eye-glint" cx="35" cy="38.5" r="0.95"/>
+          <circle class="eye-glint" cx="45" cy="38.5" r="0.95"/>
+          <!-- nose -->
+          <path class="nose" d="M40 39 L38.4 45 L41.4 45"/>
+          <!-- horseshoe mustache -->
+          <path class="mustache" d="M33.5 45.5 Q40 48.5 46.5 45.5 L45.5 50 L44 48.8 Q40 50 36 48.8 L34.5 50 Z"/>
+          <!-- subtle scowl -->
+          <path class="mouth" d="M37 49.6 Q40 51 43 49.6"/>
+          <!-- center-parted fringe + straight side curtains over the face -->
+          <path class="hair-front" d="M40 11 C33 11 27 16 26 27 L30 31 C31 22 34 18 40 17 C46 18 49 22 50 31 L54 27 C53 16 47 11 40 11 Z"/>
+          <path class="hair-front" d="M26 27 C24 37 25 51 28 61 L22 58 C20 46 21 34 26 27 Z"/>
+          <path class="hair-front" d="M54 27 C56 37 55 51 52 61 L58 58 C60 46 59 34 54 27 Z"/>
         </g>
       </svg>
     </button>
@@ -303,6 +387,7 @@
   <script src="js/theory.js"></script>
   <script src="js/data.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/drums.js"></script>
   <script src="js/piano.js"></script>
   <script src="js/guitar.js"></script>
   <script src="js/chords.js"></script>

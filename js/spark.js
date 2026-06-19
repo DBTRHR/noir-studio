@@ -179,6 +179,115 @@
       });
     },
 
+    // Tempo to lock chords + riff together. Use the Riff engine's current BPM
+    // (default 100) so both feel align rhythmically. One beat = 60/bpm seconds.
+    _syncBeat() {
+      const bpm = (root.Riff && root.Riff.bpm) ? root.Riff.bpm : 100;
+      return 60 / bpm;
+    },
+
+    // Schedule chord strums against an externally supplied shared start time.
+    // `beat` is seconds-per-chord. Returns the chord block's total length (s).
+    _scheduleProg(seq, t0, beat, inst) {
+      if (!seq || !seq.length) return 0;
+      seq.forEach((ch, i) => {
+        this._voiceChord(ch.notes).forEach((vn, j) =>
+          AudioEngine.play(vn, "2n", 0.72, t0 + i * beat + j * 0.022, inst));
+      });
+      return seq.length * beat;
+    },
+
+    // PLAY BOTH — chords + riff from the SAME clock so they never drift.
+    // We compute ONE t0 = AudioEngine.now() + lead-in and schedule the chord
+    // strums (via _scheduleProg) AND the riff notes (via Riff._scheduleNotes,
+    // which already accepts a start-time arg) against that same t0. Both use
+    // the riff's BPM for the beat, so they stay rhythmically aligned.
+    playBoth(seq, riffSeq) {
+      const hasProg = seq && seq.length;
+      const hasRiff = riffSeq && riffSeq.length && root.Riff;
+      if (!hasProg && !hasRiff) return;
+      this.app.startAudio().then(() => {
+        const inst = this._inst();
+        const t0 = AudioEngine.now() + 0.12; // single shared lead-in
+        const beat = this._syncBeat();       // chord beat from riff BPM
+        if (hasProg) this._scheduleProg(seq, t0, beat, inst);
+        if (hasRiff) {
+          try { root.Riff._scheduleNotes(riffSeq, t0, root.Riff.instrument, null); }
+          catch (e) {}
+        }
+      });
+    },
+
+    // play a single chord (click-to-hear on a chord chip)
+    playOneChord(ch) {
+      if (!ch || !ch.notes) return;
+      this.app.startAudio().then(() => {
+        const inst = this._inst();
+        const t0 = AudioEngine.now() + 0.02;
+        this._voiceChord(ch.notes).forEach((vn, j) =>
+          AudioEngine.play(vn, "2n", 0.78, t0 + j * 0.022, inst));
+      });
+    },
+
+    // Drag-to-reorder the progression. The order lives in
+    // this.current.prog.chords (the same array all playback reads), so once we
+    // splice it the next Play chords / Play both / Send to Looper uses the new
+    // order. We distinguish a click (hear the chord) from a drag (reorder) via
+    // a per-pointer "moved" flag set on dragstart.
+    _wireChords() {
+      const wrap = this.cardEl.querySelector("[data-spark-chords]");
+      if (!wrap) return;
+      const chips = Array.from(wrap.querySelectorAll(".spark-chord"));
+      let dragFrom = null;     // index being dragged
+      let didDrag = false;     // true if a drag actually started
+
+      chips.forEach((chip) => {
+        const idx = () => parseInt(chip.dataset.ci, 10);
+
+        chip.addEventListener("click", () => {
+          if (didDrag) { didDrag = false; return; } // swallow click after a drag
+          const s = this.current;
+          if (s && s.prog && s.prog.chords) this.playOneChord(s.prog.chords[idx()]);
+        });
+
+        chip.addEventListener("dragstart", (e) => {
+          dragFrom = idx();
+          didDrag = true;
+          chip.classList.add("dragging");
+          try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", String(dragFrom)); } catch (err) {}
+        });
+        chip.addEventListener("dragend", () => {
+          chip.classList.remove("dragging");
+          chips.forEach((c) => c.classList.remove("drag-over"));
+          // reset shortly after so the synthetic click that follows is swallowed
+          setTimeout(() => { didDrag = false; }, 0);
+        });
+        chip.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          try { e.dataTransfer.dropEffect = "move"; } catch (err) {}
+          if (idx() !== dragFrom) chip.classList.add("drag-over");
+        });
+        chip.addEventListener("dragleave", () => chip.classList.remove("drag-over"));
+        chip.addEventListener("drop", (e) => {
+          e.preventDefault();
+          chip.classList.remove("drag-over");
+          const to = idx();
+          if (dragFrom == null || to === dragFrom) return;
+          this._reorderChord(dragFrom, to);
+        });
+      });
+    },
+
+    _reorderChord(from, to) {
+      const s = this.current;
+      if (!s || !s.prog || !s.prog.chords) return;
+      const arr = s.prog.chords;
+      if (from < 0 || from >= arr.length || to < 0 || to >= arr.length) return;
+      const [moved] = arr.splice(from, 1);
+      arr.splice(to, 0, moved);
+      this.renderCard(); // re-render reflects new order + re-wires handlers
+    },
+
     progToLooper(seq, idea) {
       if (!seq || !seq.length || !root.Looper) { this.app.toast("Looper not ready"); return; }
       this.app.startAudio().then(() => {
@@ -237,12 +346,13 @@
       const progBlock = s.prog && s.prog.chords.length
         ? `<div class="spark-section">
              <span class="spark-eyebrow">Chords · ${s.prog.name}</span>
-             <div class="spark-chords">
-               ${s.prog.chords.map((ch) =>
-                 `<span class="spark-chord">${ch.symbol}<small>${ch.roman}</small></span>`).join("")}
+             <div class="spark-chords" data-spark-chords>
+               ${s.prog.chords.map((ch, i) =>
+                 `<span class="spark-chord" draggable="true" data-ci="${i}" title="Drag to reorder · click to hear">${ch.symbol}<small>${ch.roman}</small></span>`).join("")}
              </div>
              <div class="spark-actions-row">
                <button class="btn-accent" data-act="prog-play">▶ Play chords</button>
+               ${s.riff && s.riff.length ? `<button class="btn-accent" data-act="play-both">▶▶ Play both</button>` : ""}
                <button class="btn" data-act="prog-loop">⟲ Send to Looper</button>
              </div>
            </div>`
@@ -281,10 +391,14 @@
       const c = this.cardEl;
       const q = (a) => c.querySelector(`[data-act="${a}"]`);
       const progPlay = q("prog-play"); if (progPlay) progPlay.addEventListener("click", () => this.playProg(s.prog.chords));
+      const playBoth = q("play-both"); if (playBoth) playBoth.addEventListener("click", () => this.playBoth(s.prog.chords, s.riff));
       const progLoop = q("prog-loop"); if (progLoop) progLoop.addEventListener("click", () => this.progToLooper(s.prog.chords, s));
       const riffPlay = q("riff-play"); if (riffPlay) riffPlay.addEventListener("click", () => this.playRiff(s.riff));
       const riffOpen = q("riff-open"); if (riffOpen) riffOpen.addEventListener("click", () => this.openRiff(s.riff));
       q("keep").addEventListener("click", () => this.keepCurrent());
+
+      // Wire chord interactions: click-to-hear + drag-to-reorder.
+      this._wireChords();
 
       // re-roll button label nudges from "Spark me" to "Spark again"
       this.btnSpark.querySelector(".spark-go-label").textContent = "✦ Spark again";

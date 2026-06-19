@@ -12,12 +12,14 @@ A sleek, **Batman-Noir** (black · crimson · white, frosted "Apple Glass") musi
 | **Pick a Feeling** | Key Lab | 12 vibes (Happy, Dark, Dreamy, Bluesy, Evil…) each mapped to a fitting scale + root. |
 | **Find a Song** | Key Lab | 91-song database — search by title/artist, it sets the key it's played in. |
 | **Relative minor / major** | Key Lab | One tap to flip to the relative (and parallel) key. |
-| **🎹 Piano** | Tab | Multi-octave keyboard, scale notes lit, **root in red**. Click to play. |
+| **🎹 Piano** | Tab | Multi-octave keyboard, scale notes lit, **root in red**. Click to play, or use your **computer keyboard**: **Chromatic** mode (every key is a real note — play *any* note incl. sharps) or **In-key** mode (keys snap to the scale). Two stacked octaves — bottom row `Z…/`, home row `A…'` — and **Right/Left Shift** to move octaves. |
 | **🎸 Guitar** | Tab | Fretboard with every scale note on every string. **10 tunings** + fully custom per-string tuning (note + octave). |
-| **🎲 Random Riff Writer** | Tab | Generates musical riffs from your key (weighted random walk that resolves to the root). Tempo + length sliders, play, loop, and **send to the Looper**. |
-| **🔁 Looper** | Tab | Record a take on piano/guitar, then **overdub layered loops** in sync. Bars, tempo, quantize, metronome, per-track mute/delete. |
+| **✦ Spark** | Tab | One-tap song idea (key + chords + riff). **Play both** chords & riff together in sync, and **drag to reorder** the chords. |
+| **🎲 Random Riff Writer** | Tab | Generates musical riffs from your key (weighted random walk that resolves to the root). Tempo + length sliders, play, loop, and **send to the Studio**. |
+| **🎛️ Studio** | Tab | FL-Studio-style multitrack: **up to 12 tracks**, per-track instrument (piano / acoustic / electric / **electronic & acoustic drums**), **record-arm / solo / mute / volume**, **drum step-sequencer**, metronome + **grid-locked quantize** with count-in. **Loop** mode or **Song** mode — an auto-sizing arrangement canvas that grows from ~30s up to **8 min** as you add/paste clips. **Undo/redo** (Backspace/Home, nothing ever lost) + **copy/paste** clips (Insert/Pause). Hotkeys: **Space** play/stop · **Q** rec · **W** play · **E** clear. |
 | **📖 Chord Book** | Tab | Real **chord diagrams** (SVG) for every root — Major / Minor / 7th — plus the diatonic chords in your current key. Tap any chord to hear it strummed. |
 | **🎓 Learn Scales** | Tab | Every scale's step pattern, degrees, and a "play scale" button that lights up the instrument. |
+| **🤘 Metal Dude** | Floating | In-app metal mentor (offline knowledge base + optional BYO-key OpenAI) for theory, songwriting, and gear questions. |
 | **Transpose** | Header | ♭− / ♯+ to nudge the whole key by a semitone. |
 
 ## Sound
