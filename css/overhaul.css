@@ -1,0 +1,385 @@
+/* =====================================================================
+   NOIR Studio — STATE-OF-THE-ART OVERHAUL
+   Loaded AFTER styles.css. Two dramatic, fully-tokenized themes driven by
+   the existing W/Noir toggle (:root[data-theme="noir"|"light"]) plus new
+   feature UI (No-Theory Composer, Spark-everywhere, Notes/Chords toggles,
+   send-to buttons, Weird-Al avatar). Purely additive — overrides tokens
+   and a few surfaces; never removes existing markup or behaviour.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   DISPLAY FONTS — gothic-flavoured serif display for NOIR headings,
+   kept performant (only two extra families). Falls back gracefully.
+   --------------------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,600&display=swap');
+
+/* =====================================================================
+   THEME A — NOIR  (data-theme="noir", the default / dark)
+   Batman art-deco × film-noir × black-metal × Addams Family.
+   Near-black, blood-crimson + tarnished-gold, fog/vignette/grain.
+   ===================================================================== */
+:root,
+:root[data-theme="noir"] {
+  --bg:        #050407;
+  --bg-2:      #0b0910;
+  --ink:       #f4f1ea;
+  --muted:     #c5bfb2;
+  --faint:     #8c8676;
+
+  /* crimson + tarnished gold dual-accent */
+  --red:       #b00d10;
+  --red-soft:  #e8413f;
+  --red-deep:  #5e0608;
+  --red-dim:   #2a0708;
+  --gold:      #c8a55b;
+  --gold-soft: #e6cf94;
+  --gold-deep: #8a6d2c;
+
+  --surface:   rgba(232, 226, 210, 0.030);
+  --surface-2: rgba(232, 226, 210, 0.055);
+  --line:      rgba(200, 165, 91, 0.14);
+  --line-2:    rgba(200, 165, 91, 0.26);
+
+  --radius:    16px;
+  --radius-sm: 10px;
+  --shadow:    0 26px 60px -20px rgba(0,0,0,0.85), 0 2px 0 rgba(200,165,91,.05);
+  --glow:      0 0 0 1px rgba(176,13,16,.45), 0 10px 36px -8px rgba(176,13,16,0.5);
+  --glow-gold: 0 0 0 1px rgba(200,165,91,.4), 0 8px 30px -8px rgba(200,165,91,0.4);
+  --ease:      cubic-bezier(.22,.61,.36,1);
+  --display:   "Cinzel", "Space Grotesk", var(--font);
+  --display-2: "Cormorant Garamond", Georgia, serif;
+  --grain-op:  0.05;
+  --vignette:  rgba(0,0,0,.62);
+}
+
+/* ambient: blood-moon disc + fog + art-deco rays */
+:root[data-theme="noir"] .bg-glow {
+  background:
+    radial-gradient(circle at 16% 12%, rgba(176,13,16,0.34) 0%, rgba(176,13,16,0.16) 22%, transparent 44%),
+    radial-gradient(50% 60% at 88% -8%, rgba(200,165,91,0.10), transparent 70%);
+  filter: blur(16px);
+}
+:root[data-theme="noir"] .bg-grid {
+  background:
+    radial-gradient(125% 95% at 50% -12%, #100c14 0%, #08060a 46%, var(--bg) 100%);
+}
+
+/* =====================================================================
+   THEME B — WEST  (data-theme="light")
+   Back to the Future 3: Old-West desert sunset × DeLorean chrome ×
+   flux-capacitor glow. Warm sepia, dusty gold/tan, turquoise + steel.
+   ===================================================================== */
+:root[data-theme="light"] {
+  --bg:        #d8c6a2;
+  --bg-2:      #cbb78f;
+  --ink:       #2a1d10;
+  --muted:     #5a4327;
+  --faint:     #836846;
+
+  --red:       #c0531c;   /* sunset rust */
+  --red-soft:  #e07a35;
+  --red-deep:  #7c3110;
+  --red-dim:   #efd8b8;
+  --gold:      #b88a3c;
+  --gold-soft: #e0b566;
+  --gold-deep: #7d5a20;
+  /* flux-capacitor turquoise accent for West */
+  --flux:      #1fb6c9;
+  --flux-soft: #5fdcec;
+
+  --surface:   rgba(253, 247, 234, 0.60);
+  --surface-2: rgba(253, 247, 234, 0.82);
+  --line:      rgba(80, 52, 24, 0.22);
+  --line-2:    rgba(80, 52, 24, 0.36);
+  --shadow:    0 18px 46px -18px rgba(80,52,20,0.5), 0 1px 0 rgba(255,255,255,.5) inset;
+  --glow:      0 0 0 1px rgba(192,83,28,.4), 0 8px 26px -8px rgba(192,83,28,0.5);
+  --glow-gold: 0 0 0 1px rgba(184,138,60,.4), 0 8px 24px -8px rgba(184,138,60,0.45);
+  --display:   "Cinzel", "Space Grotesk", var(--font);
+  --display-2: "Cormorant Garamond", Georgia, serif;
+  --grain-op:  0.04;
+  --vignette:  rgba(70,45,18,.30);
+}
+:root[data-theme="light"] .bg-glow {
+  background:
+    radial-gradient(circle at 82% 8%, rgba(245, 184, 96, 0.6) 0%, rgba(216,140,54,0.32) 16%, transparent 44%),
+    radial-gradient(55% 50% at 12% 4%, rgba(31,182,201,0.16), transparent 70%);
+  filter: blur(12px);
+}
+:root[data-theme="light"] .bg-grid {
+  background: radial-gradient(125% 95% at 50% -10%, #ecdfc1 0%, var(--bg-2) 50%, #bca374 100%);
+}
+
+/* =====================================================================
+   SHARED CINEMATIC CHROME — film grain + vignette overlays.
+   Pointer-events: none so they never block clicks. GPU-light.
+   ===================================================================== */
+body::before {  /* vignette */
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 110% at 50% 38%, transparent 56%, var(--vignette) 100%);
+}
+body::after {   /* fine film grain */
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: var(--grain-op);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+/* keep grain/vignette behind interactive layers but above the flat bg */
+.topbar, .layout, .nathan, #xport, #loader, #toast { position: relative; z-index: 1; }
+
+/* =====================================================================
+   DISPLAY HEADINGS — gothic/deco treatment on both themes
+   ===================================================================== */
+.brand h1, .panel-head h2, #current-key, .scale-detail-head h3,
+.spark-empty-lead, .spark-key, .composer-head h2 {
+  font-family: var(--display); letter-spacing: .04em;
+}
+.brand h1 { font-weight: 900; text-transform: uppercase; }
+.panel-head h2 { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.brand h1 span { color: var(--gold); }
+:root[data-theme="noir"] .brand h1 {
+  text-shadow: 0 0 18px rgba(176,13,16,.35), 0 2px 0 rgba(0,0,0,.6);
+}
+
+/* art-deco angular frame accent on the topbar */
+.topbar {
+  border-image: linear-gradient(120deg, var(--gold-deep), transparent 30%, transparent 70%, var(--gold-deep)) 1;
+  border-top: 2px solid transparent;
+}
+.bat {
+  background: linear-gradient(160deg, var(--red), var(--red-deep));
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(200,165,91,.4);
+}
+:root[data-theme="light"] .bat { background: linear-gradient(160deg, var(--red), var(--red-deep)); }
+
+/* active tab / chips: gold-edged crimson for depth on both themes */
+.tab.active { box-shadow: var(--glow), inset 0 0 0 1px rgba(200,165,91,.35); }
+.root-chip.active { box-shadow: var(--glow), inset 0 0 0 1px rgba(200,165,91,.3); }
+
+/* gold hairline under panel heads — deco rule */
+.panel-head { position: relative; padding-bottom: 10px; }
+.panel-head::after {
+  content: ""; position: absolute; left: 0; bottom: 0; width: 64px; height: 2px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+/* =====================================================================
+   THEME TOGGLE — big, obvious, labelled "WEST ☀ / NOIR 🌙"
+   ===================================================================== */
+.theme-toggle {
+  font-family: var(--display); letter-spacing: .06em; font-weight: 700;
+  padding: 12px 18px; border-radius: 13px;
+  box-shadow: var(--glow-gold);
+}
+.theme-toggle::after {
+  content: "switch world"; display: block; font-family: var(--font);
+  font-size: 8.5px; letter-spacing: 2px; color: var(--faint); margin-top: 2px; text-transform: uppercase;
+}
+
+/* smooth cross-theme transition on the big surfaces */
+body, .glass, .topbar, .tab, .root-chip, .btn, .btn-accent, .feeling-card,
+.theme-toggle, select, .panel-head h2, .brand h1 {
+  transition: background-color .4s var(--ease), color .35s var(--ease),
+              border-color .35s var(--ease), box-shadow .35s var(--ease);
+}
+
+/* =====================================================================
+   WEST-THEME chrome surfaces (DeLorean stainless + flux glow)
+   ===================================================================== */
+:root[data-theme="light"] .key.white { background: linear-gradient(180deg,#fdfaf2,#e7dcc6); }
+:root[data-theme="light"] .key.black { background: linear-gradient(180deg,#3c2e1d,#171009); }
+:root[data-theme="light"] .fb-grid { background: linear-gradient(180deg,#6b5132,#41301c); }
+:root[data-theme="light"] .piano-board {
+  background: linear-gradient(180deg,#b9b2a4,#8d8576);  /* brushed stainless */
+}
+:root[data-theme="light"] .tab.active,
+:root[data-theme="light"] .spark-go { box-shadow: var(--glow), 0 0 22px -6px var(--flux); }
+
+/* =====================================================================
+   ACCESSIBILITY — strong, visible focus rings on both themes
+   ===================================================================== */
+button:focus-visible, select:focus-visible, input:focus-visible,
+a:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--gold-soft);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .08s !important; }
+}
+
+/* =====================================================================
+   FEATURE: NO-THEORY COMPOSER  (headline panel)
+   Big friendly mood buttons + plain-language blurbs + one-click compose.
+   ===================================================================== */
+.composer-head { margin-bottom: 6px; }
+.composer-lead {
+  font-family: var(--display-2); font-size: 19px; font-style: italic;
+  color: var(--muted); line-height: 1.5; max-width: 60ch; margin: 4px 0 18px;
+}
+.composer-step-label {
+  display: block; font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; margin: 22px 0 12px;
+}
+.composer-step-label b { color: var(--red-soft); }
+
+.mood-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.mood-card {
+  text-align: left; cursor: pointer; border-radius: 16px; padding: 16px 16px 14px;
+  background: var(--surface-2); border: 1px solid var(--line-2); color: var(--ink);
+  display: flex; flex-direction: column; gap: 6px; transition: .18s var(--ease);
+  position: relative; overflow: hidden;
+}
+.mood-card::before {
+  content: ""; position: absolute; inset: 0; opacity: 0; transition: .2s var(--ease);
+  background: radial-gradient(120% 100% at 0% 0%, rgba(176,13,16,.16), transparent 60%);
+}
+.mood-card:hover { transform: translateY(-4px); border-color: var(--red); box-shadow: var(--glow); }
+.mood-card:hover::before { opacity: 1; }
+.mood-card.active {
+  border-color: transparent; color: #fff;
+  background: linear-gradient(160deg, var(--red), var(--red-deep));
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(200,165,91,.4);
+}
+.mood-card.active .mc-blurb { color: rgba(255,255,255,.82); }
+.mood-card.active .mc-tags  { color: rgba(255,255,255,.7); }
+.mc-emoji { font-size: 28px; line-height: 1; }
+.mc-name  { font-family: var(--display); font-size: 16px; font-weight: 700; text-transform: capitalize; letter-spacing: .02em; }
+.mc-blurb { font-size: 12px; color: var(--faint); line-height: 1.4; }
+.mc-tags  { font-size: 10px; color: var(--faint); letter-spacing: .3px; opacity: .8; }
+
+.composer-keyrow { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.composer-keyrow .field.inline { margin-bottom: 0; }
+.composer-keyhint { font-size: 12px; color: var(--faint); }
+
+.composer-cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 24px 0 8px; }
+.composer-compose {
+  font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: .05em;
+  color: #fff; cursor: pointer; border: none; border-radius: 16px; padding: 16px 30px;
+  background: linear-gradient(160deg, var(--red), var(--red-deep));
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(200,165,91,.4);
+  transition: .18s var(--ease); text-transform: uppercase;
+}
+.composer-compose:hover { transform: translateY(-2px); box-shadow: var(--glow), 0 0 30px -6px var(--red-soft), inset 0 0 0 1px rgba(200,165,91,.6); }
+.composer-compose:disabled { opacity: .45; cursor: default; transform: none; }
+.composer-compose .cc-spark { margin-right: 8px; }
+
+.composer-result { margin-top: 22px; }
+.composer-song.glass { padding: 22px 24px; border-radius: 18px; border: 1px solid var(--gold-deep); }
+.cs-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 4px; }
+.cs-mood { font-family: var(--display); font-size: 24px; font-weight: 700; text-transform: capitalize; }
+.cs-key  { font-family: var(--display-2); font-size: 22px; font-style: italic; color: var(--gold-soft); }
+.cs-meta { font-size: 12px; color: var(--muted); letter-spacing: .3px; margin-bottom: 16px; }
+.cs-meta b { color: var(--red-soft); }
+.cs-section { margin: 14px 0; }
+.cs-eyebrow { display: block; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-bottom: 8px; }
+.cs-chords { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-chord {
+  font-family: var(--display); font-weight: 700; font-size: 15px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--line-2); color: var(--ink);
+  border-radius: 11px; padding: 9px 13px; line-height: 1.15; transition: .15s var(--ease);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 52px;
+}
+.cs-chord small { font-size: 9.5px; font-weight: 600; color: var(--gold-soft); letter-spacing: .5px; }
+.cs-chord:hover { border-color: var(--red); color: #fff; background: linear-gradient(160deg,var(--red),var(--red-deep)); transform: translateY(-2px); }
+.cs-riff { font-family: var(--display-2); font-size: 18px; letter-spacing: 2px; color: var(--red-soft); }
+.cs-structure { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-sec { font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+.cs-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+
+/* =====================================================================
+   FEATURE: SPARK-EVERYWHERE bar + NOTES/CHORDS toggle + SEND-TO buttons
+   ===================================================================== */
+.feature-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+  margin: 0 0 16px; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--line-2); border-radius: 14px;
+  backdrop-filter: blur(18px);
+}
+.feature-bar .fb-spark {
+  font-family: var(--display); font-weight: 700; letter-spacing: .04em; cursor: pointer;
+  color: #fff; border: none; border-radius: 11px; padding: 10px 16px;
+  background: linear-gradient(160deg, var(--red), var(--red-deep));
+  box-shadow: var(--glow), inset 0 0 0 1px rgba(200,165,91,.35); transition: .16s var(--ease);
+}
+.feature-bar .fb-spark:hover { transform: translateY(-2px); box-shadow: var(--glow), 0 0 22px -6px var(--red-soft), inset 0 0 0 1px rgba(200,165,91,.55); }
+.feature-bar .fb-sep { width: 1px; align-self: stretch; background: var(--line-2); margin: 2px 4px; }
+.feature-bar .fb-hint { font-size: 11.5px; color: var(--faint); }
+
+.nc-toggle { display: inline-flex; gap: 3px; padding: 4px; border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line-2); }
+.nc-toggle .nc-btn {
+  background: transparent; border: none; color: var(--muted); cursor: pointer;
+  border-radius: 8px; padding: 8px 14px; font-size: 12.5px; font-weight: 700; font-family: var(--font);
+  letter-spacing: .3px; transition: .15s var(--ease);
+}
+.nc-toggle .nc-btn[aria-pressed="true"] { color: #fff; background: linear-gradient(160deg,var(--red),var(--red-deep)); box-shadow: var(--glow); }
+.nc-toggle .nc-btn:hover { color: var(--ink); }
+
+.send-btn {
+  font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 10px; padding: 8px 13px;
+  background: var(--surface-2); border: 1px solid var(--gold-deep); color: var(--gold-soft);
+  transition: .15s var(--ease); font-family: var(--font);
+}
+.send-btn:hover { border-color: var(--gold); color: #fff; background: linear-gradient(160deg, var(--gold-deep), #4a3818); transform: translateY(-1px); }
+.send-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+.chord-pill { cursor: pointer; }
+.chord-pill:hover { border-color: var(--red); box-shadow: var(--glow); transform: translateY(-2px); }
+.scale-degrees .deg { cursor: pointer; transition: .14s var(--ease); }
+.scale-degrees .deg:hover { color: var(--red-soft); transform: translateY(-1px); }
+.scale-degrees .deg.audition { color: #fff; background: var(--red); border-radius: 7px; }
+
+/* =====================================================================
+   WEIRD-AL avatar restyle (CSS/emoji only)
+   curly dark hair, big glasses, mustache, loud Hawaiian shirt.
+   ===================================================================== */
+.nathan-avatar, .nch-avatar {
+  background: repeating-linear-gradient(45deg, #ff6b9d 0 10px, #ffd23f 10px 20px, #2ec4b6 20px 30px, #ff9f1c 30px 40px) !important;
+  border-color: var(--gold) !important;
+  position: relative;
+}
+.nathan-svg .hair-back,
+.nathan-svg .hair-front { fill: #1a120c !important; }
+.nathan-svg .face { fill: #e8c39e !important; }
+.nathan-svg .goatee { fill: #e8c39e !important; opacity: .22 !important; }
+.nathan-svg .brow { fill: #1a120c !important; }
+.nathan-svg .mustache { fill: #1a120c !important; }
+.nathan-svg .mouth { stroke: #7a4a2c !important; }
+/* BIG round glasses overlay (two lenses + bridge) */
+.nathan-avatar::before {
+  content: ""; position: absolute; left: 50%; top: 47%; transform: translate(-50%,-50%);
+  width: 60%; height: 26%; z-index: 3; pointer-events: none;
+  background:
+    radial-gradient(circle at 24% 50%, rgba(180,220,235,.45) 0 5.5px, #14110f 5.5px 8px, transparent 8px),
+    radial-gradient(circle at 76% 50%, rgba(180,220,235,.45) 0 5.5px, #14110f 5.5px 8px, transparent 8px);
+}
+.nathan-avatar::after {
+  content: ""; position: absolute; left: 50%; top: 47%; transform: translate(-50%,-50%);
+  width: 16%; height: 2.5px; z-index: 3; pointer-events: none; background: #14110f;
+}
+:root[data-theme="light"] .nathan-avatar,
+:root[data-theme="light"] .nch-avatar { border-color: var(--flux) !important; }
+
+/* =====================================================================
+   METAL DUDE VOICE toggle + COVER art
+   ===================================================================== */
+.md-voice-toggle {
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer; flex: 0 0 auto;
+  display: grid; place-items: center; font-size: 16px; line-height: 1;
+  background: var(--surface-2); border: 1.5px solid var(--line-2); color: var(--ink);
+  box-shadow: var(--shadow); transition: .16s var(--ease); align-self: flex-end;
+}
+.md-voice-toggle:hover { transform: translateY(-2px) scale(1.05); border-color: var(--gold); }
+.md-voice-toggle.on {
+  border-color: var(--red); color: #fff;
+  background: linear-gradient(160deg, var(--red), var(--red-deep));
+  box-shadow: var(--glow);
+}
+
+.track-cover {
+  width: 200px; height: 200px; object-fit: cover; border-radius: 12px;
+  border: 1px solid var(--gold-deep); box-shadow: var(--shadow);
+  float: right; margin: 0 0 14px 18px;
+}
+@media (max-width: 560px) { .track-cover { float: none; display: block; margin: 0 auto 14px; } }

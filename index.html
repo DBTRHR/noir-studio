@@ -4,12 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>NOIR Studio — Piano & Guitar Key Lab</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23050407'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='%23b00d10'%3E%E2%99%AB%3C/text%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://tonejs.github.io" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/overhaul.css" />
 </head>
 <body>
   <!-- ambient backdrop -->
@@ -32,7 +34,7 @@
       <button id="transpose-down" title="Down a semitone">♭ −</button>
       <button id="transpose-up" title="Up a semitone">♯ +</button>
     </div>
-    <button id="theme-toggle" class="theme-toggle" title="Switch theme">🦇 Noir</button>
+    <button id="theme-toggle" class="theme-toggle" title="Switch world — flips visuals AND musical mood">🌙 NOIR</button>
   </header>
 
   <main class="layout">
@@ -76,7 +78,8 @@
     <!-- ============ RIGHT: WORKSPACE ============ -->
     <section class="workspace">
       <nav class="tabs">
-        <button class="tab active" data-tab="spark">✦ Spark</button>
+        <button class="tab active" data-tab="compose">🎼 Compose</button>
+        <button class="tab" data-tab="spark">✦ Spark</button>
         <button class="tab" data-tab="piano">🦇 Piano</button>
         <button class="tab" data-tab="guitar">🕷️ Guitar</button>
         <button class="tab" data-tab="riff">🔮 Riff Writer</button>
@@ -85,8 +88,47 @@
         <button class="tab" data-tab="studio">🎛️ Studio</button>
       </nav>
 
+      <!-- NO-THEORY COMPOSER — pick a vibe, hit Compose, hear a whole song -->
+      <div class="panel active" data-panel="compose">
+        <div class="panel-head composer-head">
+          <h2>🎼 Compose</h2>
+          <p class="composer-lead">No theory required. Pick a <b>vibe</b>, hit <b>Compose</b>,
+            and the studio writes you a whole song — chords, a riff, drums, the right key and
+            tempo — then loads it everywhere so you can play and tweak it.</p>
+        </div>
+
+        <span class="composer-step-label"><b>1.</b> Choose a vibe</span>
+        <div id="composer-moods" class="mood-grid"></div>
+
+        <span class="composer-step-label"><b>2.</b> (Optional) lock a key</span>
+        <div class="composer-keyrow">
+          <label class="field inline"><span>Key</span>
+            <select id="composer-key"><option value="">Let the vibe decide</option></select>
+          </label>
+          <label class="field inline"><span>Tempo</span>
+            <select id="composer-tempo">
+              <option value="">Auto</option>
+              <option value="70">70 · slow</option>
+              <option value="100">100 · medium</option>
+              <option value="130">130 · fast</option>
+              <option value="160">160 · driving</option>
+            </select>
+          </label>
+          <span class="composer-keyhint">Leave on auto and the vibe picks what fits.</span>
+        </div>
+
+        <div class="composer-cta">
+          <button id="composer-compose" class="composer-compose" disabled>
+            <span class="cc-spark">✦</span>Compose
+          </button>
+          <button id="composer-play" class="btn-accent" style="display:none">▶ Play it</button>
+        </div>
+
+        <div id="composer-result" class="composer-result"></div>
+      </div>
+
       <!-- SPARK — one-tap song idea generator -->
-      <div class="panel active" data-panel="spark">
+      <div class="panel" data-panel="spark">
         <div class="panel-head">
           <h2>✦ Spark</h2>
           <p class="muted">One tap = a key, a few chords, and a riff — set across the whole app so you can play along by ear. Stuck or bored? Start here.</p>
@@ -110,6 +152,15 @@
           <h2>Piano</h2>
           <p class="muted">Lit keys are in your key. The <span class="legend-root">red</span> keys are the root. Click to play.</p>
         </div>
+        <div class="feature-bar" data-feature-bar="piano">
+          <button class="fb-spark" data-spark-here="piano">✦ Spark an idea</button>
+          <span class="fb-sep"></span>
+          <div class="nc-toggle" data-nc="piano" role="group" aria-label="Play notes or chords">
+            <button class="nc-btn" data-nc-mode="notes" aria-pressed="true">♪ Notes</button>
+            <button class="nc-btn" data-nc-mode="chords" aria-pressed="false">⊞ Chords</button>
+          </div>
+          <span class="fb-hint" data-nc-hint="piano">In Chords mode, a key plays the diatonic chord on that scale degree.</span>
+        </div>
         <div id="piano-board" class="piano-board"></div>
       </div>
 
@@ -118,6 +169,15 @@
         <div class="panel-head">
           <h2>Guitar Fretboard</h2>
           <p class="muted">Dots show the notes in your key on every string. Change tuning below.</p>
+        </div>
+        <div class="feature-bar" data-feature-bar="guitar">
+          <button class="fb-spark" data-spark-here="guitar">✦ Spark an idea</button>
+          <span class="fb-sep"></span>
+          <div class="nc-toggle" data-nc="guitar" role="group" aria-label="Play notes or chords">
+            <button class="nc-btn" data-nc-mode="notes" aria-pressed="true">♪ Notes</button>
+            <button class="nc-btn" data-nc-mode="chords" aria-pressed="false">⊞ Chords</button>
+          </div>
+          <span class="fb-hint" data-nc-hint="guitar">In Chords mode, a fret plays the diatonic chord rooted on that note.</span>
         </div>
         <div class="tuning-bar glass">
           <label class="field inline">
@@ -159,6 +219,7 @@
             <button class="seg-btn" data-riff-style="random">🎲 Random</button>
             <button class="seg-btn active" data-riff-style="cookie">🍪 Cookie-cutter</button>
             <button class="seg-btn" data-riff-style="abstract">🌀 Abstract</button>
+            <button class="seg-btn" data-riff-style="motif">🎼 Motif</button>
           </div>
           <label class="field inline delay-field"><span>🌫️ Delay</span>
             <select id="delay-select" class="delay-select">
@@ -172,6 +233,7 @@
         </div>
         <div class="riff-actions glass">
           <button id="riff-generate" class="btn-accent">🔮 Generate</button>
+          <button class="fb-spark" data-spark-here="riff">✦ Spark</button>
           <button id="riff-suggest" class="btn">🃏 Suggest&nbsp;3</button>
           <button id="riff-play" class="btn">▶ Play</button>
           <button id="riff-loop" class="btn">🌀 Loop</button>
@@ -201,6 +263,10 @@
         <div class="key-chords-wrap">
           <h3>Chords in <span id="kc-key-name"></span> your key</h3>
           <div id="key-chords" class="key-chords"></div>
+          <div class="send-row">
+            <button class="send-btn" data-send-prog="studio">→ Send progression to Studio</button>
+            <button class="send-btn" data-send-prog="riff">→ Send to Riff Writer</button>
+          </div>
         </div>
         <div class="chord-quality-bar">
           <button class="qbtn active" data-chord-quality="maj">Major</button>
@@ -262,6 +328,7 @@
         <!-- mixer / track list -->
         <div class="studio-tracks-head">
           <h3>Tracks</h3>
+          <button class="fb-spark" data-spark-here="studio" title="Generate a chord + riff idea straight into the Studio">✦ Spark into Studio</button>
           <button id="studio-add" class="btn-accent">+ Add track</button>
         </div>
         <div id="studio-tracks" class="studio-tracks"></div>
@@ -396,7 +463,11 @@
   <script src="js/looper.js"></script>
   <script src="js/kb.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/mood.js"></script>
   <script src="js/spark.js"></script>
+  <script src="js/composer.js"></script>
+  <script src="js/wiring.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/nathan.js"></script>
 </body>
 </html>

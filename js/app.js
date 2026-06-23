@@ -15,6 +15,10 @@
       tuning: NoirData.TUNINGS[0].strings.slice(),
       showLabels: true,         // piano note labels
       showAllFret: false,       // show out-of-scale fret notes faintly
+      // Shared mood: "noir" (dark) | "w" (bright/west).
+      // Initialised from the persisted theme so the two stay in sync.
+      // Generators (Riff, Spark, Mood engine) read this for biasing.
+      mood: (localStorage.getItem("noir.theme") || "noir") === "light" ? "w" : "noir",
     },
     rand: Math.random,
     _listeners: {},
@@ -25,6 +29,21 @@
     on(evt, fn) { (this._listeners[evt] = this._listeners[evt] || []).push(fn); },
     emit(evt, payload) { (this._listeners[evt] || []).forEach((fn) => fn(payload)); },
     change() { this.emit("change"); this.renderKeyReadout(); },
+
+    /* ---- mood (W / Noir bias) ---- */
+    // mood: "noir" | "w"
+    // Called by applyTheme() when the theme toggle flips, and can be called
+    // directly by any module that wants to change generation bias.
+    // Frontend hook: call App.setMood("noir") or App.setMood("w").
+    getMood() { return this.state.mood; },
+    setMood(mood) {
+      const m = mood === "w" ? "w" : "noir";
+      if (this.state.mood === m) return;
+      this.state.mood = m;
+      this.emit("mood", m);
+      // Propagate to Mood engine if loaded
+      if (root.MoodEngine && MoodEngine.onMoodChange) MoodEngine.onMoodChange(m);
+    },
 
     /* ---- derived theory ---- */
     scaleNoteNames() { return Theory.getScaleNotes(this.state.root, this.state.scale); },
@@ -257,10 +276,14 @@
     },
 
     applyTheme(name) {
-      document.documentElement.dataset.theme = name === "light" ? "light" : "noir";
+      const isLight = name === "light";
+      document.documentElement.dataset.theme = isLight ? "light" : "noir";
       localStorage.setItem("noir.theme", document.documentElement.dataset.theme);
       const btn = document.getElementById("theme-toggle");
-      if (btn) btn.textContent = document.documentElement.dataset.theme === "light" ? "🤠 West" : "🦇 Noir";
+      // Label shows the world you'll switch TO, so the action is obvious.
+      if (btn) btn.textContent = isLight ? "🌙 NOIR" : "☀ WEST";
+      // Sync mood bias to theme — "light" (W) = bright, "noir" = dark
+      this.setMood(isLight ? "w" : "noir");
     },
 
     buildTabs() {

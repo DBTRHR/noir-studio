@@ -251,6 +251,32 @@
       const e = this._e && this._e[voice];
       if (e) { try { e.trigger(time, vel); } catch (err) {} }
     },
+
+    /* ------------------------------------------------------------------ */
+    /*  Genre groove presets (NEW)                                         */
+    /*  Returns a 16-step pattern object for the requested genre.          */
+    /*  Delegates to Theory.getGroovePreset so patterns live in one place. */
+    /*  genre: "rock"|"funk"|"metal"|"hiphop"|"neo-soul"|"blues"|"bossa"  */
+    /*                                                                     */
+    /*  Each key (kick/snare/closedHat/openHat) maps to a 16-element      */
+    /*  boolean array: true = hit on that 16th-note step.                  */
+    /* ------------------------------------------------------------------ */
+    getGroovePreset(genre) {
+      if (root.Theory && Theory.getGroovePreset) return Theory.getGroovePreset(genre);
+      // fallback minimal rock beat if Theory isn't loaded yet
+      return {
+        kick:      [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+        snare:     [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        closedHat: [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+        openHat:   [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+      };
+    },
+
+    /* Returns array of groove genre names. */
+    groovePresetNames() {
+      if (root.Theory && Theory.groovePresetNames) return Theory.groovePresetNames();
+      return ["rock","funk","metal","hiphop","neo-soul","blues","bossa"];
+    },
   };
 
   root.Drums = Drums;

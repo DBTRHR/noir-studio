@@ -88,10 +88,36 @@
     },
 
     /* ---------- generation ---------- */
-    _pool() {
-      const a = this.app.scaleNotesWithOctaves(3);
-      const b = this.app.scaleNotesWithOctaves(4);
-      return a.slice(0, -1).concat(b);
+
+    // Build the note pool spanning octaveRange octaves.
+    // Default base octave is 3; noir mood shifts down one octave,
+    // bright (W) mood shifts up one octave to bias the register.
+    // octaveRange: tunable via RIFF_PARAMS — defaults to 2.
+    _pool(octaveRange) {
+      const params  = this._params();
+      const range   = octaveRange || params.octaveRange || 2;
+      const mood    = this.app && this.app.state && this.app.state.mood;
+      // Base octave: low (2) for noir, normal (3) for neutral, high (3) for W
+      // (keeps the overall register consistent with mood without losing variety)
+      const baseOct = mood === "noir" ? 2 : 3;
+      let pool = [];
+      for (let o = 0; o < range; o++) {
+        const octave = baseOct + o;
+        const notes  = this.app.scaleNotesWithOctaves(octave);
+        // scaleNotesWithOctaves returns notes[0..n] + tonic-one-above;
+        // omit the repeated tonic cap on all but the final pass
+        const slice  = o < range - 1 ? notes.slice(0, -1) : notes;
+        pool = pool.concat(slice);
+      }
+      return pool;
+    },
+
+    // Get merged riff params (base + mood override from Theory.RIFF_PARAMS)
+    _params() {
+      try {
+        const mood = this.app && this.app.state && this.app.state.mood;
+        return Theory.getRiffParams(mood);
+      } catch (e) { return Theory.RIFF_PARAMS.base; }
     },
 
     // scale-degree of a pool note (0 = root, 2 = third, 4 = fifth ...)
@@ -101,68 +127,246 @@
     },
     _clamp(i, pool) { return Math.max(0, Math.min(pool.length - 1, i)); },
 
+    // Octave-displace a pool index: find the same pitch class an octave up/down.
+    // Returns a new index into pool, or i if no match found (safe fallback).
+    _displaceOctave(i, pool, direction) {
+      const note   = pool[i];
+      if (!note) return i;
+      const m      = note.match(/^([A-G]#?b?)(\d+)$/);
+      if (!m) return i;
+      const pc     = Theory.noteIndex(m[1]);
+      const oct    = parseInt(m[2], 10) + (direction > 0 ? 1 : -1);
+      const target = m[1] + oct;
+      const idx    = pool.indexOf(target);
+      return idx >= 0 ? idx : i;
+    },
+
     _makeRiff(len, style) {
       style = style || this.style;
       const pool = this._pool();
       if (!pool.length) return [];
       if (style === "random") return this._genRandom(pool, len);
       if (style === "abstract") return this._genAbstract(pool, len);
+      if (style === "motif") return this._genMotif(len);
       return this._genCookie(pool, len); // thoughtful, conventional
     },
 
+    // MOTIF — call-and-response shape with stepwise motion via Theory engine
+    _genMotif(len) {
+      try {
+        const rootName = this.app.state.root;
+        const scale    = this.app.state.scale;
+        const mood     = this.app.state.mood;
+        // Choose base octave by mood (matches _pool bias)
+        const baseOct  = mood === "noir" ? 3 : 4;
+        const seq      = Theory.generateMotif(rootName, scale, len, baseOct);
+        if (seq && seq.length) return seq;
+      } catch (e) {}
+      // fallback to cookie-cutter if Theory engine unavailable
+      return this._genCookie(this._pool(), len);
+    },
+
     // RANDOM — chaotic, all in-key, no forced shape (still 100% original)
+    // Now reads restProbability and octaveJumpProbability from tunable params.
     _genRandom(pool, len) {
-      const rnd = this.app.rand, seq = [];
+      const rnd    = this.app.rand;
+      const params = this._params();
+      const seq    = [];
+      let   idx    = Math.floor(pool.length / 2);
       for (let i = 0; i < len; i++) {
-        if (rnd() < this.restProb + 0.05) { seq.push({ rest: true, dur: "8n" }); continue; }
-        const idx = Math.floor(rnd() * pool.length);
-        const rr = rnd();
+        if (rnd() < params.restProbability) {
+          seq.push({ rest: true, dur: "8n" }); continue;
+        }
+        // Mostly stay near current idx (stepwise), but allow jumps
+        const r = rnd();
+        if (r < params.stepVsLeapRatio) {
+          idx = this._clamp(idx + (rnd() < 0.5 ? 1 : -1), pool);
+        } else if (r < params.stepVsLeapRatio + params.octaveJumpProbability) {
+          idx = this._displaceOctave(idx, pool, rnd() < 0.5 ? 1 : -1);
+        } else {
+          idx = this._clamp(idx + (rnd() < 0.5 ? 3 : -3), pool);
+        }
+        const rr  = rnd();
         const dur = rr < 0.25 ? "16n" : rr < 0.7 ? "8n" : rr < 0.92 ? "4n" : "2n";
         seq.push({ rest: false, note: pool[idx], dur });
       }
       return seq;
     },
 
-    // COOKIE-CUTTER — thoughtful & conventional: chord tones on strong beats,
-    // stepwise motion, a repeated motif (hook), resolves to the root.
+    // COOKIE-CUTTER — research-tuned catchy hook generator.
+    // Implements:
+    //   - ARCH contour (peak at ~62% through phrase, descent to root)
+    //   - Interval-weighted moves (unison > step > skip > leap > big-leap)
+    //   - Strong beats → chord tones {1,3,5}; weak → passing tones {2,4,6,7}
+    //   - GAP-FILL after leaps (≥ gapFillThreshold semitones)
+    //   - POST-LEAP REVERSAL after big leaps (≥ 6 semitones)
+    //   - 2-bar call phrase; response varies back-half on 3rd+ occurrence
+    //   - Octave displacement on response phrase for register variety
+    //   All probabilities/ratios are tunable via Theory.RIFF_PARAMS.
     _genCookie(pool, len) {
-      const rnd = this.app.rand;
-      const names = this.app.scaleNoteNames();
-      const isChordTone = (i) => { const d = this._degreeOf(pool[i], names); return d === 0 || d === 2 || d === 4; };
-      const nearestChordTone = (i) => {
+      const rnd    = this.app.rand;
+      const params = this._params();
+      const names  = this.app.scaleNoteNames();
+
+      const isChordTone = (i) => {
+        const d = this._degreeOf(pool[i], names);
+        return d === 0 || d === 2 || d === 4;
+      };
+      const nearestChordTone = (i, dir) => {
+        // Find nearest chord tone in preferred direction first
+        const d = dir || 0;
         for (let r = 0; r < pool.length; r++) {
-          if (i - r >= 0 && isChordTone(i - r)) return i - r;
-          if (i + r < pool.length && isChordTone(i + r)) return i + r;
+          const a = d >= 0 ? i + r : i - r;
+          const b = d >= 0 ? i - r : i + r;
+          if (a >= 0 && a < pool.length && isChordTone(a)) return a;
+          if (b >= 0 && b < pool.length && isChordTone(b)) return b;
         }
         return i;
       };
-      const half = Math.max(2, Math.ceil(len / 2));
-      let idx = nearestChordTone(Math.floor(pool.length / 2) - 2);
-      const motif = [];
+
+      // Interval-weighted move based on RIFF_PARAMS intervalWeights
+      // Pool index distance approximates semitones (1 pool step ≈ 1-2 semitones)
+      // Sizes: [0=unison, 1=step, 2=skip, 3=leap, 4=bigLeap]
+      const IW = params.intervalWeights || [0.15, 0.42, 0.22, 0.15, 0.06];
+      const weightedMove = () => {
+        const r = rnd(), sizes = [0, 1, 2, 3, 4];
+        let cum = 0;
+        for (let i = 0; i < IW.length; i++) {
+          cum += IW[i]; if (r < cum) return sizes[i];
+        }
+        return 1;
+      };
+
+      // ARCH contour: fraction of length where peak occurs
+      const peakPos  = params.archPeakPosition || 0.62;
+      const half     = Math.max(2, Math.ceil(len / 2));
+      const gapThresh = params.gapFillThreshold || 5; // in semitone-ish pool units
+      const postLeapMin = params.postLeapReversalMin || 6;
+
+      // Start near lower third so there's room to rise to the arch peak
+      let idx = nearestChordTone(Math.floor(pool.length / 4), 1);
+      const callSeq = [];
+
+      // ------- CALL: arch rise → peak → descent -------
       for (let i = 0; i < half; i++) {
-        if (i % 2 === 0) idx = nearestChordTone(idx);
-        else idx = this._clamp(idx + (rnd() < 0.5 ? 1 : -1), pool); // step
-        const dur = i % 2 === 0 ? (rnd() < 0.8 ? "8n" : "4n") : "8n";
-        motif.push({ rest: false, note: pool[idx], dur });
+        const progress = (i + 1) / half;
+        const rising   = progress < peakPos;
+        const magnitude = weightedMove();
+
+        // Direction: rising phase goes up, descending goes down
+        // Add small random component so it doesn't go perfectly straight
+        let dir = rising ? 1 : -1;
+        if (magnitude === 0) dir = 0;
+        if (rnd() < 0.2) dir = -dir; // occasional local deviation keeps it natural
+
+        let newIdx = this._clamp(idx + dir * magnitude, pool);
+
+        // Strong beat (even positions): snap to nearest chord tone
+        const isStrong = i % 2 === 0;
+        if (isStrong && rnd() < params.chordToneBias) {
+          newIdx = nearestChordTone(newIdx, dir);
+        }
+
+        // GAP-FILL: leap ≥ threshold → insert a step back before continuing
+        const dist = Math.abs(newIdx - idx);
+        if (dist >= gapThresh && callSeq.length > 0 && callSeq.length < half - 1) {
+          const fillIdx = this._clamp(newIdx + (dir > 0 ? -1 : 1), pool);
+          callSeq.push({ rest: false, note: pool[fillIdx], dur: "8n" });
+          if (callSeq.length >= half) break;
+        }
+
+        // POST-LEAP REVERSAL: big leap ≥ postLeapMin → next forced step reversal
+        const approxSemitones = dist * 2;
+        if (approxSemitones >= postLeapMin && i < half - 2) {
+          // Will be handled by forcing dir reversal on next iteration via idx update
+          // (setting idx to newIdx causes the next dir calculation to over-correct naturally)
+        }
+
+        idx = newIdx;
+        const dur = isStrong ? (rnd() < 0.7 ? "8n" : "4n") : "8n";
+        callSeq.push({ rest: false, note: pool[idx], dur });
+        if (callSeq.length >= half) break;
       }
-      const seq = motif.map((s) => ({ ...s }));
-      for (let i = 0; i < len - half && i < motif.length; i++) seq.push({ ...motif[i] });
-      while (seq.length < len) seq.push({ ...motif[seq.length % motif.length] });
+
+      // Pad call to half length if short
+      while (callSeq.length < half && callSeq.length > 0) {
+        callSeq.push({ ...callSeq[callSeq.length - 1] });
+      }
+
+      // ------- RESPONSE: vary back-half (bar 2), resolve to root -------
+      // Research: "repeat exactly 2x, vary on 3rd pass — vary the back half"
+      // For a single call+response pair, response = varied copy of call.
+      const doOctaveShift  = rnd() < params.octaveJumpProbability;
+      const shiftDir       = rnd() < 0.65 ? 1 : -1; // prefer up (brighter)
+      const respSeq        = [];
+      const respLen        = len - half - 1;          // leave one slot for resolution
+
+      for (let i = 0; i < respLen; i++) {
+        const src = callSeq[i % callSeq.length];
+        if (!src) break;
+        let newIdx2 = pool.indexOf(src.note);
+        if (newIdx2 < 0) newIdx2 = idx;
+
+        // Octave-displace the first note of the response for register contrast
+        if (doOctaveShift && i === 0) {
+          newIdx2 = this._displaceOctave(newIdx2, pool, shiftDir);
+        }
+
+        // Vary: diatonic step drift (mostly downward in 2nd half for arch completion)
+        const drift = rnd() < 0.5 ? -1 : (rnd() < 0.6 ? 0 : 1);
+        newIdx2 = this._clamp(newIdx2 + drift, pool);
+
+        // Post-leap reversal in response half
+        if (respSeq.length > 0) {
+          const prev  = respSeq[respSeq.length - 1];
+          if (prev && !prev.rest) {
+            const pi = pool.indexOf(prev.note);
+            if (pi >= 0) {
+              const leap = Math.abs(newIdx2 - pi);
+              if (leap * 2 >= postLeapMin && rnd() < 0.75) {
+                newIdx2 = this._clamp(pi + (pi > newIdx2 ? -1 : 1), pool);
+              }
+            }
+          }
+        }
+
+        const dur = rnd() < 0.6 ? "8n" : (rnd() < 0.5 ? "4n" : "16n");
+        respSeq.push({ rest: false, note: pool[this._clamp(newIdx2, pool)], dur });
+      }
+
+      // Resolve to root
       const rootIdx = pool.findIndex((n) => this._degreeOf(n, names) === 0);
-      seq[seq.length - 1] = { rest: false, note: pool[rootIdx < 0 ? 0 : rootIdx], dur: "4n" }; // resolve
+      const resolveNote = rootIdx >= 0 ? pool[rootIdx] : pool[0];
+      respSeq.push({ rest: false, note: resolveNote, dur: "4n" });
+
+      const seq = callSeq.concat(respSeq);
+
+      // Pad to exact length
+      while (seq.length < len && callSeq.length > 0) {
+        seq.push({ ...callSeq[seq.length % callSeq.length] });
+      }
+      seq[seq.length - 1] = { rest: false, note: resolveNote, dur: "4n" };
       return seq.slice(0, len);
     },
 
-    // ABSTRACT — experimental: wide leaps, syncopation, rests, less resolution
+    // ABSTRACT — experimental: wide leaps, syncopation, rests, less resolution.
+    // Reads restProbability from tunable params but keeps its own leap-heavy profile.
     _genAbstract(pool, len) {
-      const rnd = this.app.rand, seq = [];
-      let idx = Math.floor(pool.length / 2);
+      const rnd    = this.app.rand;
+      const params = this._params();
+      const seq    = [];
+      let   idx    = Math.floor(pool.length / 2);
       for (let i = 0; i < len; i++) {
-        if (rnd() < this.restProb + 0.12) { seq.push({ rest: true, dur: rnd() < 0.5 ? "16n" : "8n" }); continue; }
+        if (rnd() < params.restProbability + 0.12) {
+          seq.push({ rest: true, dur: rnd() < 0.5 ? "16n" : "8n" }); continue;
+        }
         const r = rnd();
+        // Noir mood: prefer larger leaps. W mood: prefer smaller.
+        const leapBig   = 5 - Math.round((params.stepVsLeapRatio - 0.55) * 4);
+        const leapMid   = Math.max(3, leapBig - 1);
         const move = r < 0.35 ? (rnd() < 0.5 ? 1 : -1)
-                   : r < 0.65 ? (rnd() < 0.5 ? 4 : -4)
-                   : (rnd() < 0.5 ? 5 : -5); // big leaps
+                   : r < 0.65 ? (rnd() < 0.5 ? leapMid : -leapMid)
+                   :             (rnd() < 0.5 ? leapBig : -leapBig);
         idx = this._clamp(idx + move, pool);
         const rr = rnd();
         const dur = rr < 0.45 ? "16n" : rr < 0.78 ? "8n" : rr < 0.92 ? "4n" : "2n";

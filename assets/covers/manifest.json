@@ -1,0 +1,4 @@
+{
+  "_comment": "List the cover PNG filenames that actually exist in this folder. The app only loads covers listed here, so missing covers never hit the browser console. When you generate covers into assets/covers/ (see assets/INTEGRATION.md), add their filenames to \"available\" and they light up automatically — no code change.",
+  "available": []
+}
